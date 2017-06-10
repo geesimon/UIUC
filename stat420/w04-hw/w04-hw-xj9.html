@@ -365,27 +365,49 @@ H_0: \beta_{\texttt{SV_PCT}} = \beta_{\texttt{GAA}} = \beta_{\texttt{SO}} = 0
 <p>For this exercise we will once again use the data stored in <a href="goalies_cleaned.csv"><code>goalies_cleaned.csv</code></a>. The goal of this exercise is to fit a model with <code>W</code> as the response and the remaining variables as predictors.</p>
 <p><strong>(a)</strong> Obtain the estimated regression coefficients <strong>without</strong> the use of <code>lm()</code> or any other built-in functions for regression. That is, you should use only matrix operations. Store the results in a vector <code>beta_hat_no_lm</code>. To ensure this is a vector, you may need to use <code>as.vector()</code>. Return this vector as well as the results of <code>sum(beta_hat_no_lm)</code>.</p>
 <p><strong>Solution:</strong></p>
-<pre class="r"><code>X = cbind(rep(1, nrow(goalies_data)), as.matrix(subset(goalies_data, select = -1)))
+<pre class="r"><code>n = nrow(goalies_data)
+p = length(goalies_data)
+X = cbind(rep(1, n), as.matrix(subset(goalies_data, select = -1)))
 y = goalies_data$W
 
 (beta_hat_no_lm = as.vector(solve(t(X) %*% X) %*% t(X) %*% y))</code></pre>
 <pre><code>## [1]  5.26516186 -0.11328049  0.05163855 -0.05821512 -8.04751912 -0.04960055
 ## [7]  0.45993589  0.01317900  0.04684216</code></pre>
-<pre class="r"><code>sum(beta_hat_no_lm)</code></pre>
+<pre class="r"><code>(beta_hat_no_lm_sum = sum(beta_hat_no_lm))</code></pre>
 <pre><code>## [1] -2.431858</code></pre>
 <p><strong>(b)</strong> Obtain the estimated regression coefficients <strong>with</strong> the use of <code>lm()</code>. Store the results in a vector <code>beta_hat_lm</code>. To ensure this is a vector, you may need to use <code>as.vector()</code>. Return this vector as well as the results of <code>sum(beta_hat_lm)</code>.</p>
 <p><strong>Solution:</strong></p>
 <pre class="r"><code>(beta_hat_lm = as.vector(coef(model_3)))</code></pre>
 <pre><code>## [1]  5.26516186 -0.11328049  0.05163855 -0.05821512 -8.04751912 -0.04960055
 ## [7]  0.45993589  0.01317900  0.04684216</code></pre>
-<pre class="r"><code>sum(beta_hat_lm)</code></pre>
+<pre class="r"><code>(beta_hat_lm_sum = sum(beta_hat_lm))</code></pre>
 <pre><code>## [1] -2.431858</code></pre>
 <p><strong>(c)</strong> Use the <code>all.equal()</code> function to verify that the results are the same. You may need to remove the names of one of the vectors. The <code>as.vector()</code> function will do this as a side effect, or you can directly use <code>unname()</code>.</p>
 <p><strong>Solution:</strong></p>
 <pre class="r"><code>all.equal(beta_hat_no_lm, beta_hat_lm)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(beta_hat_no_lm_sum, beta_hat_lm_sum)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
 <p><strong>(d)</strong> Calculate <span class="math inline">\(s_e\)</span> without the use of <code>lm()</code>. That is, continue with your results from <strong>(a)</strong> and perform additional matrix operations to obtain the result. Output this result. Also, verify that this result is the same as the result obtained from <code>lm()</code>.</p>
+<p><strong>Solution:</strong></p>
+<pre class="r"><code>y_hat = X %*% solve(t(X) %*% X) %*% t(X) %*% y
+e     = y - y_hat
+(se = sqrt(t(e) %*% e / (n - p)))</code></pre>
+<pre><code>##          [,1]
+## [1,] 12.51873</code></pre>
+<pre class="r"><code>(se_lm = summary(model_3)$sigma)</code></pre>
+<pre><code>## [1] 12.51873</code></pre>
+<p><strong>They are the same</strong></p>
 <p><strong>(e)</strong> Calculate <span class="math inline">\(R^2\)</span> without the use of <code>lm()</code>. That is, continue with your results from <strong>(a)</strong> and <strong>(d)</strong>, and perform additional operations to obtain the result. Output this result. Also, verify that this result is the same as the result obtained from <code>lm()</code>.</p>
+<p><strong>Solution:</strong></p>
+<pre class="r"><code>y_mean = mean(y)
+SST = sum((y - y_mean) ^ 2)
+SSReg = sum((y_hat - y_mean) ^ 2)
+(r_squared = SSReg / SST)</code></pre>
+<pre><code>## [1] 0.9858258</code></pre>
+<pre class="r"><code>(r_squared_lm = summary(model_3)$r.squared)</code></pre>
+<pre><code>## [1] 0.9858258</code></pre>
+<p><strong>They are the same</strong></p>
 </div>
 <div id="exercise-4-regression-for-prediction" class="section level2">
 <h2>Exercise 4 (Regression for Prediction)</h2>
@@ -408,7 +430,15 @@ y = goalies_data$W
 <p>Set a seed of <code>42</code>, and then split the <code>Boston</code> data into two datasets, one called <code>train_data</code> and one called <code>test_data</code>. The <code>train_data</code> dataframe should contain 250 randomly chosen observations. <code>test_data</code> will contain the remaining observations. Hint: consider the following code:</p>
 <pre class="r"><code>library(MASS)
 set.seed(42)
-train_index = sample(1:nrow(Boston), 250)</code></pre>
+train_index = sample(1:nrow(Boston), 250)
+train_data = Boston[train_index,]
+test_data = Boston[-train_index,]
+
+rmse = function(y, y_hat) {
+  n = length(y)
+  e = y - y_hat
+  sqrt(sum(e ^ 2) / n)
+}</code></pre>
 <p>Fit a total of five models using the training data.</p>
 <ul>
 <li>One must use all possible predictors.</li>
@@ -416,6 +446,71 @@ train_index = sample(1:nrow(Boston), 250)</code></pre>
 <li>The remaining three you can pick to be anything you like. One of these should be the best of the five for predicting the response.</li>
 </ul>
 <p>For each model report the <strong>train</strong> and <strong>test</strong> RMSE. Arrange your results in a well-formatted markdown table. Argue that one of your models is the best for predicting the response.</p>
+<p><strong>Solution:</strong></p>
+<ul>
+<li>Model 1: all possible predictors</li>
+<li>Model 2: tax</li>
+<li>Model 3: age + rm + zn</li>
+<li>Model 4: black + ptratio + lstat + crim</li>
+<li>Model 5: indus + dis + rad + nox</li>
+</ul>
+<pre class="r"><code>model_1 = lm(medv ~ ., data = train_data)
+model_2 = lm(medv ~ tax, data = train_data)
+model_3 = lm(medv ~ age + rm + zn, data = train_data)
+model_4 = lm(medv ~ black + ptratio + lstat + crim, data = train_data)
+model_5 = lm(medv ~ indus + dis + rad + nox, data = train_data)
+
+
+test_y_1_hat = as.vector(predict(model_1, newdata = test_data))
+test_y_2_hat = as.vector(predict(model_2, newdata = test_data))
+test_y_3_hat = as.vector(predict(model_3, newdata = test_data))
+test_y_4_hat = as.vector(predict(model_4, newdata = test_data))
+test_y_5_hat = as.vector(predict(model_5, newdata = test_data))
+
+RMSE_1 = rmse(test_data$medv, test_y_1_hat)
+RMSE_2 = rmse(test_data$medv, test_y_2_hat)
+RMSE_3 = rmse(test_data$medv, test_y_3_hat)
+RMSE_4 = rmse(test_data$medv, test_y_4_hat)
+RMSE_5 = rmse(test_data$medv, test_y_5_hat)
+
+table_data = data.frame(Model = c(&quot;ALL&quot;, &quot;tax&quot;, &quot;age + rm + zn&quot;, 
+                                  &quot;black + ptratio + lstat + crim&quot;,
+                                  &quot;indus + dis + rad + nox&quot;),
+                        RMSE = c(RMSE_1, RMSE_2, RMSE_3, RMSE_4, RMSE_5))
+
+library(&quot;knitr&quot;)
+kable(table_data, format = &quot;markdown&quot;)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Model</th>
+<th align="right">RMSE</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">ALL</td>
+<td align="right">5.157132</td>
+</tr>
+<tr class="even">
+<td align="left">tax</td>
+<td align="right">8.666215</td>
+</tr>
+<tr class="odd">
+<td align="left">age + rm + zn</td>
+<td align="right">6.675939</td>
+</tr>
+<tr class="even">
+<td align="left">black + ptratio + lstat + crim</td>
+<td align="right">6.136255</td>
+</tr>
+<tr class="odd">
+<td align="left">indus + dis + rad + nox</td>
+<td align="right">8.199785</td>
+</tr>
+</tbody>
+</table>
+<p>Given <strong>ALL</strong> model has the least RMSE, it is the best model among the five to predict the response.</p>
 </div>
 <div id="exercise-5-simulating-multiple-regression" class="section level2">
 <h2>Exercise 5 (Simulating Multiple Regression)</h2>
