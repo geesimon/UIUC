@@ -58,7 +58,6 @@ When reporting these, you should explicitly state them in your document, not ass
 library(readr)
 nutrition_data = read_csv("nutrition.csv")
 nutrition_model = lm(Calories ~ Carbs + Fat + Protein, data = nutrition_data)
-summary(nutrition_model)
 ```
 
 - The null and alternative hypotheses:
@@ -66,7 +65,7 @@ $$
 H_0: \beta_1 = \beta_2 = \beta_3 = 0
 $$
 $$
-H_1: \text{At least one of } \beta_j \neq 0, j = 1, 2, 3
+H_1: \text{At least one of } \beta_1, \beta_2 \text{ or } \beta_3 \text{ is not equal to 0}
 $$
 Under null hypotheses, none of the predictors have a significant linear relationship with the response. While alternative hypotheses says at least one of the predictors has a significant linear relationship with the response. 
 
@@ -82,7 +81,7 @@ summary(nutrition_model)$fstatistic
 
 **Solution:**
 ```{r}
-coef(summary(nutrition_model))[,"Estimate"]
+coef(nutrition_model)
 ```
 - $\hat{\beta}_0 = `r coef(summary(nutrition_model))["(Intercept)","Estimate"]`$ is our estimate for $\beta_0$, the mean calories for a food that has 0 carbohydrates, 0 fat and 0 protein. Such food never exist, and we shouldn't expect our model to be accurate for such food.
 - $\hat{\beta}_1 = `r coef(summary(nutrition_model))["Carbs","Estimate"]`$ is our estimate for $\beta_1$, the average change in calories for an increase in carbohydrates ($x_{1}$) of 1 gram for a food of a certain fat ($x_{2}$) and protein ($x_{3}$). This estimate is positive, which we would expect since, in general, calories increases when carbohydrates increases. 
@@ -221,7 +220,7 @@ $$
 - F test statistic: `r result[2,"F"]`
 - p-value: `r format(result[2,"Pr(>F)"])`
 - Given the p-value is greater than 0.01, we fail to reject the null hypothesis at $\alpha = 0.01$
-- We conclude that **none** of Save Percentage, Goals Against Average and Shutouts are significant with Goals Against, Shots Against, Saves, Minutes and Penalties in Minutes already in the model. Given model 2 has less parameters, we prefer model 2.
+- We conclude that **none** of Save Percentage, Goals Against Average and Shutouts are significant with Goals Against, Shots Against, Saves, Minutes and Penalties in Minutes already in the model. Given model 2 has less parameters, we prefer **model 2**.
 
 **(c)** Use a $t$-test to test $H_0: \beta_{\text{SA}} = 0 \ \text{vs} \ H_1: \beta_{\text{SA}} \neq 0$ for the model you preferred in part **(b)**. Report the following:
 
@@ -416,17 +415,40 @@ We will verify the distribution of $\hat{\beta}_1$ as well as investigate some h
 
 Report the diagonal of `C` as well as the 10th row of `sim_data`. For this exercise we will use the seed `1337`. Generate the above variables in the order listed after running the code below to set a seed.
 
+**Solution:**
 ```{r}
 set.seed(1337)
 sample_size = 20
+beta_0 = 1
+beta_1 = 2.5
+beta_2 = 0
+beta_3 = 4
+beta_4 = 1
+sigma = 4
 
-x0 = 
-x1 =
-x2 =
-x3
+x0 = rep(1, sample_size)
+x1 = runif(sample_size, min = 0, max = 5)
+x2 = runif(sample_size, min = 0, max = 10)
+x3 = rnorm(sample_size, mean = 0, sd = 1)
+x4 = rnorm(sample_size, mean = 0, sd = 2)
+X = cbind(x0, x1, x2, x3, x4)
+C = solve(t(X) %*% X)
+y = rep(0, sample_size)
+sim_data = data.frame(y = y, x1 = x1, x2 = x2, x3 = x3, x4 = x4)
+
+diag(C)
+sim_data[10, ]
 ```
 
 **(b)** Create three vectors of length `2000` that will store results from the simulation in part **(c)**. Call them `beta_hat_1`, `beta_2_pval`, and `beta_3_pval`.
+
+**Solution:**
+```{r}
+num_sims = 2000
+beta_hat_1 = rep(0, num_sims)
+beta_2_pval = rep(0, num_sims)
+beta_3_pval = rep(0, num_sims)
+```
 
 **(c)** Simulate 2000 samples of size `n = 20` from the model above. Each time update the `y` value of `sim_data`. Then use `lm()` to fit a multiple regression model. Each time store:
 
@@ -434,11 +456,58 @@ x3
 - The p-value for the two-sided test of $\beta_2 = 0$ in `beta_2_pval`
 - The p-value for the two-sided test of $\beta_3 = 0$ in `beta_3_pval`
 
+**Solution:**
+```{r}
+for(i in 1:num_sims) {
+  eps           = rnorm(sample_size, mean = 0 , sd = sigma)
+  sim_data$y    = beta_0 + beta_1 * x1 + beta_2 * x2 + beta_3 * x3 + beta_4 * x4 + eps
+  model           = lm(y ~ x1 + x2 + x3 + x4, data = sim_data)
+  beta_hat_1[i] = coef(model)[2]
+  beta_2_pval[i] = summary(model)$coefficients["x2", "Pr(>|t|)"]
+  beta_3_pval[i] = summary(model)$coefficients["x3", "Pr(>|t|)"]
+}
+```
+
 **(d)** Based on the known values of $X$, what is the true distribution of $\hat{\beta}_1$?
+
+**Solution:**
+
+```{r}
+var_beta_hat_1_true = sigma ^ 2 * C[2, 2]
+```
+
+$$
+\hat{\beta}_1 \sim N\left(\mu = `r beta_1`, \sigma^2 = `r var_beta_hat_1_true`  \right).
+$$
 
 **(e)** Calculate the mean and variance of `beta_hat_1`. Are they close to what we would expect? Plot a histogram of `beta_hat_1`. Add a curve for the true distribution of $\hat{\beta}_1$. Does the curve seem to match the histogram?
 
+**Solution:**
+```{r}
+(beta_hat_1_mean = mean(beta_hat_1))
+```
+**Yes**, it is close to true mean of $\hat{\beta}_1$ (2.5)
+
+```{r}
+hist(beta_hat_1, prob = TRUE, breaks = 20, 
+     xlab = expression(hat(beta)[1]), main = "", border = "dodgerblue")
+curve(dnorm(x, mean = beta_1, sd = sqrt(sigma ^ 2 * C[2, 2])), 
+      col = "darkorange", add = TRUE, lwd = 3)
+```
+
+**Yes**, the curve seems to match the histogram.
+
 **(f)** What proportion of the p-values stored in `beta_3_pval` are less than 0.05? Is this what you would expect?
+
+**Solution:**
+```{r}
+sum(beta_3_pval < 0.05) / length(beta_3_pval)
+```
+**Yes**, as the ${\beta}_3 = 4$, we should expect the estimates **reject** the null hypotheses most of the times.  
 
 **(g)** What proportion of the p-values stored in `beta_2_pval` are less than 0.05? Is this what you would expect?
 
+```{r}
+sum(beta_2_pval < 0.05) / length(beta_2_pval)
+```
+**Yes**, as the ${\beta}_2 = 0$, we should expect the estimates **fail to reject** the null hypotheses most of the times.
