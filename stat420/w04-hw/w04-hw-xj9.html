@@ -197,11 +197,13 @@ summary(nutrition_model)</code></pre>
 ## Residual standard error: 18.89 on 5134 degrees of freedom
 ## Multiple R-squared:  0.9889, Adjusted R-squared:  0.9889 
 ## F-statistic: 1.524e+05 on 3 and 5134 DF,  p-value: &lt; 2.2e-16</code></pre>
-<p><span class="math display">\[
+<ul>
+<li>The null and alternative hypotheses: <span class="math display">\[
 H_0: \beta_1 = \beta_2 = \beta_3 = 0
 \]</span> <span class="math display">\[
 H_1: \text{At least one of } \beta_j \neq 0, j = 1, 2, 3
-\]</span> Under null hypotheses, none of the predictors have a significant linear relationship with the response. While alternative hypotheses says at least one of the predictors has a significant linear relationship with the response.</p>
+\]</span> Under null hypotheses, none of the predictors have a significant linear relationship with the response. While alternative hypotheses says at least one of the predictors has a significant linear relationship with the response.</li>
+</ul>
 <pre class="r"><code>summary(nutrition_model)$fstatistic</code></pre>
 <pre><code>##    value    numdf    dendf 
 ## 152444.8      3.0   5134.0</code></pre>
@@ -297,7 +299,7 @@ model_3 = lm(W ~ ., data = goalies_data)</code></pre>
 <li>The model you prefer</li>
 </ul>
 <p><strong>Solution:</strong></p>
-<pre class="r"><code>anova(model_1, model_2)</code></pre>
+<pre class="r"><code>(result = anova(model_1, model_2))</code></pre>
 <pre><code>## Analysis of Variance Table
 ## 
 ## Model 1: W ~ GA + SA + SV
@@ -307,8 +309,15 @@ model_3 = lm(W ~ ., data = goalies_data)</code></pre>
 ## 2    456  71903  2    106305 337.09 &lt; 2.2e-16 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
-<p>$$ Y_i = <em>0 + <em>1 x</em>{i1} + <em>2 x</em>{i2} + + </em>{(p-1)} x_{i(p-1)} + _i</p>
-<p>H_0: _4 = _5 = 0 $$</p>
+<ul>
+<li>The null hypothesis for comparing these two models as, <span class="math display">\[
+H_0: \beta_{\texttt{MIN}} = \beta_{\texttt{PIM}} = 0
+\]</span></li>
+<li>F test statistic: 337.0864493</li>
+<li>p-value: 1.339521e-90</li>
+<li>Given the p-value is extremely low, we reject the null hypothesis at <span class="math inline">\(\alpha = 0.01\)</span></li>
+<li>We conclude that <strong>at least one</strong> of Minutes or Penalties in Minutes is significant with Goals Against, Shots Against and Saves already in the model.</li>
+</ul>
 <p><strong>(b)</strong> Use an <span class="math inline">\(F\)</span>-test to compare model 3 to your preferred model from part <strong>(a)</strong>. Report the following:</p>
 <ul>
 <li>The null hypothesis</li>
@@ -317,19 +326,64 @@ model_3 = lm(W ~ ., data = goalies_data)</code></pre>
 <li>A statistical decision at <span class="math inline">\(\alpha = 0.01\)</span></li>
 <li>The model you prefer</li>
 </ul>
+<p><strong>Solution:</strong></p>
+<pre class="r"><code>(result = anova(model_2, model_3))</code></pre>
+<pre><code>## Analysis of Variance Table
+## 
+## Model 1: W ~ GA + SA + SV + MIN + PIM
+## Model 2: W ~ GA + SA + SV + SV_PCT + GAA + SO + MIN + PIM
+##   Res.Df   RSS Df Sum of Sq      F Pr(&gt;F)
+## 1    456 71903                           
+## 2    453 70994  3    909.31 1.9341 0.1233</code></pre>
+<ul>
+<li>The null hypothesis for comparing these two models as, <span class="math display">\[
+H_0: \beta_{\texttt{SV_PCT}} = \beta_{\texttt{GAA}} = \beta_{\texttt{SO}} = 0
+\]</span></li>
+<li>F test statistic: 1.9340501</li>
+<li>p-value: 0.1232638</li>
+<li>Given the p-value is greater than 0.01, we fail to reject the null hypothesis at <span class="math inline">\(\alpha = 0.01\)</span></li>
+<li>We conclude that <strong>none</strong> of Save Percentage, Goals Against Average and Shutouts are significant with Goals Against, Shots Against, Saves, Minutes and Penalties in Minutes already in the model. Given model 2 has less parameters, we prefer model 2.</li>
+</ul>
 <p><strong>(c)</strong> Use a <span class="math inline">\(t\)</span>-test to test <span class="math inline">\(H_0: \beta_{\text{SA}} = 0 \ \text{vs} \ H_1: \beta_{\text{SA}} \neq 0\)</span> for the model you preferred in part <strong>(b)</strong>. Report the following:</p>
 <ul>
 <li>The value of the test statistic</li>
 <li>The p-value of the test</li>
 <li>A statistical decision at <span class="math inline">\(\alpha = 0.01\)</span></li>
 </ul>
+<p><strong>Solution:</strong></p>
+<pre class="r"><code>(result = coef(summary(model_2))[&quot;SA&quot;,])</code></pre>
+<pre><code>##     Estimate   Std. Error      t value     Pr(&gt;|t|) 
+## 0.0512308121 0.0135667526 3.7762030121 0.0001803057</code></pre>
+<ul>
+<li><span class="math inline">\(t\)</span>-test test statistic: 3.776203</li>
+<li>p-value: 0.0001803057</li>
+<li>Given p-value is less than 0.01, we reject the null hypothesis at <span class="math inline">\(\alpha = 0.01\)</span></li>
+</ul>
 </div>
 <div id="exercise-3-regression-without-lm" class="section level2">
 <h2>Exercise 3 (Regression without <code>lm</code>)</h2>
 <p>For this exercise we will once again use the data stored in <a href="goalies_cleaned.csv"><code>goalies_cleaned.csv</code></a>. The goal of this exercise is to fit a model with <code>W</code> as the response and the remaining variables as predictors.</p>
 <p><strong>(a)</strong> Obtain the estimated regression coefficients <strong>without</strong> the use of <code>lm()</code> or any other built-in functions for regression. That is, you should use only matrix operations. Store the results in a vector <code>beta_hat_no_lm</code>. To ensure this is a vector, you may need to use <code>as.vector()</code>. Return this vector as well as the results of <code>sum(beta_hat_no_lm)</code>.</p>
+<p><strong>Solution:</strong></p>
+<pre class="r"><code>X = cbind(rep(1, nrow(goalies_data)), as.matrix(subset(goalies_data, select = -1)))
+y = goalies_data$W
+
+(beta_hat_no_lm = as.vector(solve(t(X) %*% X) %*% t(X) %*% y))</code></pre>
+<pre><code>## [1]  5.26516186 -0.11328049  0.05163855 -0.05821512 -8.04751912 -0.04960055
+## [7]  0.45993589  0.01317900  0.04684216</code></pre>
+<pre class="r"><code>sum(beta_hat_no_lm)</code></pre>
+<pre><code>## [1] -2.431858</code></pre>
 <p><strong>(b)</strong> Obtain the estimated regression coefficients <strong>with</strong> the use of <code>lm()</code>. Store the results in a vector <code>beta_hat_lm</code>. To ensure this is a vector, you may need to use <code>as.vector()</code>. Return this vector as well as the results of <code>sum(beta_hat_lm)</code>.</p>
+<p><strong>Solution:</strong></p>
+<pre class="r"><code>(beta_hat_lm = as.vector(coef(model_3)))</code></pre>
+<pre><code>## [1]  5.26516186 -0.11328049  0.05163855 -0.05821512 -8.04751912 -0.04960055
+## [7]  0.45993589  0.01317900  0.04684216</code></pre>
+<pre class="r"><code>sum(beta_hat_lm)</code></pre>
+<pre><code>## [1] -2.431858</code></pre>
 <p><strong>(c)</strong> Use the <code>all.equal()</code> function to verify that the results are the same. You may need to remove the names of one of the vectors. The <code>as.vector()</code> function will do this as a side effect, or you can directly use <code>unname()</code>.</p>
+<p><strong>Solution:</strong></p>
+<pre class="r"><code>all.equal(beta_hat_no_lm, beta_hat_lm)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
 <p><strong>(d)</strong> Calculate <span class="math inline">\(s_e\)</span> without the use of <code>lm()</code>. That is, continue with your results from <strong>(a)</strong> and perform additional matrix operations to obtain the result. Output this result. Also, verify that this result is the same as the result obtained from <code>lm()</code>.</p>
 <p><strong>(e)</strong> Calculate <span class="math inline">\(R^2\)</span> without the use of <code>lm()</code>. That is, continue with your results from <strong>(a)</strong> and <strong>(d)</strong>, and perform additional operations to obtain the result. Output this result. Also, verify that this result is the same as the result obtained from <code>lm()</code>.</p>
 </div>

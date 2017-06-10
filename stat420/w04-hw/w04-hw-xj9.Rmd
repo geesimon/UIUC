@@ -60,6 +60,8 @@ nutrition_data = read_csv("nutrition.csv")
 nutrition_model = lm(Calories ~ Carbs + Fat + Protein, data = nutrition_data)
 summary(nutrition_model)
 ```
+
+- The null and alternative hypotheses:
 $$
 H_0: \beta_1 = \beta_2 = \beta_3 = 0
 $$
@@ -187,13 +189,17 @@ model_3 = lm(W ~ ., data = goalies_data)
 
 **Solution:**
 ```{r}
-anova(model_1, model_2)
+(result = anova(model_1, model_2))
 ```
-$$
-Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_{(p-1)} x_{i(p-1)} + \epsilon_i
 
-H_0: \beta_4 = \beta_5 = 0
+- The null hypothesis for comparing these two models as,
 $$
+H_0: \beta_{\texttt{MIN}} = \beta_{\texttt{PIM}} = 0
+$$
+- F test statistic: `r result[2,"F"]`
+- p-value: `r format(result[2,"Pr(>F)"])`
+- Given the p-value is extremely low, we reject the null hypothesis at $\alpha = 0.01$
+- We conclude that **at least one** of Minutes or Penalties in Minutes is significant with Goals Against, Shots Against and Saves already in the model.
 
 **(b)** Use an $F$-test to compare model 3 to your preferred model from part **(a)**. Report the following:
 
@@ -203,11 +209,34 @@ $$
 - A statistical decision at $\alpha = 0.01$
 - The model you prefer
 
+**Solution:**
+```{r}
+(result = anova(model_2, model_3))
+```
+
+- The null hypothesis for comparing these two models as,
+$$
+H_0: \beta_{\texttt{SV_PCT}} = \beta_{\texttt{GAA}} = \beta_{\texttt{SO}} = 0
+$$
+- F test statistic: `r result[2,"F"]`
+- p-value: `r format(result[2,"Pr(>F)"])`
+- Given the p-value is greater than 0.01, we fail to reject the null hypothesis at $\alpha = 0.01$
+- We conclude that **none** of Save Percentage, Goals Against Average and Shutouts are significant with Goals Against, Shots Against, Saves, Minutes and Penalties in Minutes already in the model. Given model 2 has less parameters, we prefer model 2.
+
 **(c)** Use a $t$-test to test $H_0: \beta_{\text{SA}} = 0 \ \text{vs} \ H_1: \beta_{\text{SA}} \neq 0$ for the model you preferred in part **(b)**. Report the following:
 
 - The value of the test statistic
 - The p-value of the test
 - A statistical decision at $\alpha = 0.01$
+
+**Solution:**
+
+```{r}
+(result = coef(summary(model_2))["SA",])
+```
+- $t$-test test statistic: `r result["t value"]`
+- p-value: `r format(result["Pr(>|t|)"])`
+- Given p-value is less than 0.01, we reject the null hypothesis at $\alpha = 0.01$
 
 ## Exercise 3 (Regression without `lm`)
 
@@ -215,9 +244,31 @@ For this exercise we will once again use the data stored in [`goalies_cleaned.cs
 
 **(a)** Obtain the estimated regression coefficients **without** the use of `lm()` or any other built-in functions for regression. That is, you should use only matrix operations. Store the results in a vector `beta_hat_no_lm`. To ensure this is a vector, you may need to use `as.vector()`. Return this vector as well as the results of `sum(beta_hat_no_lm)`.
 
+**Solution:**
+```{r}
+X = cbind(rep(1, nrow(goalies_data)), as.matrix(subset(goalies_data, select = -1)))
+y = goalies_data$W
+
+(beta_hat_no_lm = as.vector(solve(t(X) %*% X) %*% t(X) %*% y))
+sum(beta_hat_no_lm)
+```
+
+
 **(b)** Obtain the estimated regression coefficients **with** the use of `lm()`. Store the results in a vector `beta_hat_lm`. To ensure this is a vector, you may need to use `as.vector()`. Return this vector as well as the results of `sum(beta_hat_lm)`.
 
+**Solution:**
+```{r}
+(beta_hat_lm = as.vector(coef(model_3)))
+sum(beta_hat_lm)
+```
+
 **(c)** Use the `all.equal()` function to verify that the results are the same. You may need to remove the names of one of the vectors. The `as.vector()` function will do this as a side effect, or you can directly use `unname()`.
+
+**Solution:**
+```{r}
+all.equal(beta_hat_no_lm, beta_hat_lm)
+```
+
 
 **(d)** Calculate $s_e$ without the use of `lm()`. That is, continue with your results from **(a)** and perform additional matrix operations to obtain the result. Output this result. Also, verify that this result is the same as the result obtained from `lm()`.
 
