@@ -51,6 +51,10 @@ beta_2 = 1
 beta_3 = 1
 beta_4 = 1
 sigma = c(1, 5, 10)
+x1_test = -3
+x2_test = 2.5
+x3_test = 0.5
+x4_test = 0
 
 
 num_sims = 300
@@ -73,7 +77,10 @@ for (s in 1:length(sigma)) {
     sim_data$y    = beta_0 + beta_1 * sim_data$x1 + beta_2 * sim_data$x2 + beta_3 * sim_data$x3 +
                     beta_4 * sim_data$x4 + eps
     fit           = lm(y ~ ., data = sim_data)
-    beta_hat_1[i, s] = coef(fit)[2] 
+    
+    beta_hat_1[i, s]  = coef(fit)[2]
+    se_square[i, s]   = sum(fit$residuals ^ 2) / (sample_size - ncol(sim_data))
+    y_hat[i, s]       = predict(fit, newdata = data.frame(x1 = x1_test, x2 = x2_test, x3 = x3_test, x4 = x4_test ))
   }
 }
 
