@@ -20,6 +20,8 @@ We will discuss how these estimates relate to true distributions and the impact 
 
 
 ### Methods
+
+#### Setup
 For this MLR model, we assign
 
 - $\beta_0 = 2$
@@ -29,20 +31,51 @@ For this MLR model, we assign
 - $\beta_4 = 1$
 - $\epsilon_i \sim N(0, \sigma^2)$ 
 
-We will use the sample data found in [`study_1.csv`](study_1.csv) with size of 15, three possible levels of noise and some values for $x_{i}$. 
+We will use the sample data found in [`study_1.csv`](study_1.csv) with size of 15 to train this model, three possible levels of noise and test values for $x_{i}$. 
 
 - n = 15
 - $\sigma \in (1, 5, 10)$
 - $\hat{\text{E}}[Y \mid x_1 = -3, x_2 = 2.5, x_3 = 0.5, x_4 = 0]$
 
-For each value of $\sigma$, we use 3000 simulations, thus total $3 ?? 3000 = 9000$ estimates.
+To start, we initialize the seed, set constants, load data and allocate memory for the estimates
 
-To start, we initialize the seed and allocate memory for the estimates
+```{r, message=FALSE}
+library(readr)
 
-```{r}
 birthday = 19720816
 set.seed(birthday)
 
+beta_0 = 2
+beta_1 = 1
+beta_2 = 1
+beta_3 = 1
+beta_4 = 1
+sigma = c(1, 5, 10)
+
+
+num_sims = 300
+
+sim_data = read_csv("study_1.csv")
+sample_size = nrow(sim_data)
+
+beta_hat_1 = matrix(data = c(0), nrow = num_sims, ncol = length(sigma))
+se_square = matrix(data = c(0), nrow = num_sims, ncol = length(sigma))
+y_hat = matrix(data = c(0), nrow = num_sims, ncol = length(sigma))
+```
+
+#### Simulation
+We now perform the simulation `r num_sims` of times for each $\sigma$. Each time, we update the y variable in the data frame, leaving the x variables the same. We then fit a model, and store $\hat{\beta}_1$, $s_e^2$ and compute $\hat{\text{E}}[Y]$.
+
+```{r}
+for (s in 1:length(sigma)) {
+  for (i in 1:num_sims) {
+    eps           = rnorm(sample_size, mean = 0 , sd = sigma[s])
+    sim_data$y    = beta_0 + beta_1 * sim_data$x1 + beta_2 * sim_data$x2 + beta_3 * sim_data$x3 +
+                    beta_4 * sim_data$x4 + eps
+    fit           = lm(y ~ ., data = sim_data)
+    beta_hat_1[i, s] = coef(fit)[2] 
+  }
+}
 
 ```
 

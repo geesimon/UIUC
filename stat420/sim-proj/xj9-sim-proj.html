@@ -155,6 +155,8 @@ Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3}  + \beta_4 x_{i
 </div>
 <div id="methods" class="section level3">
 <h3>Methods</h3>
+<div id="setup" class="section level4">
+<h4>Setup</h4>
 <p>For this MLR model, we assign</p>
 <ul>
 <li><span class="math inline">\(\beta_0 = 2\)</span></li>
@@ -164,16 +166,48 @@ Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3}  + \beta_4 x_{i
 <li><span class="math inline">\(\beta_4 = 1\)</span></li>
 <li><span class="math inline">\(\epsilon_i \sim N(0, \sigma^2)\)</span></li>
 </ul>
-<p>We will use the sample data found in <a href="study_1.csv"><code>study_1.csv</code></a> with size of 15, three possible levels of noise and some values for <span class="math inline">\(x_{i}\)</span>.</p>
+<p>We will use the sample data found in <a href="study_1.csv"><code>study_1.csv</code></a> with size of 15 to train this model, three possible levels of noise and test values for <span class="math inline">\(x_{i}\)</span>.</p>
 <ul>
 <li>n = 15</li>
 <li><span class="math inline">\(\sigma \in (1, 5, 10)\)</span></li>
 <li><span class="math inline">\(\hat{\text{E}}[Y \mid x_1 = -3, x_2 = 2.5, x_3 = 0.5, x_4 = 0]\)</span></li>
 </ul>
-<p>For each value of <span class="math inline">\(\sigma\)</span>, we use 3000 simulations, thus total <span class="math inline">\(3 ?? 3000 = 9000\)</span> estimates.</p>
-<p>To start, we initialize the seed and allocate memory for the estimates</p>
-<pre class="r"><code>birthday = 19720816
-set.seed(birthday)</code></pre>
+<p>To start, we initialize the seed, set constants, load data and allocate memory for the estimates</p>
+<pre class="r"><code>library(readr)
+
+birthday = 19720816
+set.seed(birthday)
+
+beta_0 = 2
+beta_1 = 1
+beta_2 = 1
+beta_3 = 1
+beta_4 = 1
+sigma = c(1, 5, 10)
+
+
+num_sims = 300
+
+sim_data = read_csv(&quot;study_1.csv&quot;)
+sample_size = nrow(sim_data)
+
+beta_hat_1 = matrix(data = c(0), nrow = num_sims, ncol = length(sigma))
+se_square = matrix(data = c(0), nrow = num_sims, ncol = length(sigma))
+y_hat = matrix(data = c(0), nrow = num_sims, ncol = length(sigma))</code></pre>
+</div>
+<div id="simulation" class="section level4">
+<h4>Simulation</h4>
+<p>We now perform the simulation 300 of times for each <span class="math inline">\(\sigma\)</span>. Each time, we update the y variable in the data frame, leaving the x variables the same. We then fit a model, and store <span class="math inline">\(\hat{\beta}_1\)</span>, <span class="math inline">\(s_e^2\)</span> and compute <span class="math inline">\(\hat{\text{E}}[Y]\)</span>.</p>
+<pre class="r"><code>for (s in 1:length(sigma)) {
+  for (i in 1:num_sims) {
+    eps           = rnorm(sample_size, mean = 0 , sd = sigma[s])
+    sim_data$y    = beta_0 + beta_1 * sim_data$x1 + beta_2 * sim_data$x2 + beta_3 * sim_data$x3 +
+                    beta_4 * sim_data$x4 + eps
+    fit           = lm(y ~ ., data = sim_data)
+    beta_hat_1[i, s] = coef(fit)[2] 
+  }
+}</code></pre>
+</div>
 </div>
 <div id="results" class="section level3">
 <h3>Results</h3>
