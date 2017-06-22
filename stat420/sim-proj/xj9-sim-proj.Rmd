@@ -16,7 +16,7 @@ In this simulation study we will investigate the distribution of regression esti
 $$
 Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3}  + \beta_4 x_{i4} + \epsilon_i
 $$
-We will discuss how these estimates relate to true distributions and the impact of different $\sigma$.
+We will discuss how these estimates relate to true distributions and the impact of different noise.
 
 
 ### Methods
@@ -138,16 +138,19 @@ for (s in 1:length(SIGMA)) {
 We list the simulated $\text{E}[\hat{\beta}_1]$, $\text{E}[s_e^2]$ and $\text{E}[\hat{y}(x_{eval})]$ as following table.
 
 ```{r}
-beta_hat_1_mean = c(mean(beta_hat_1[,1]), mean(beta_hat_1[,2]), mean(beta_hat_1[,3]))
-y_hat_eval_mean = c(mean(y_hat_eval[,1]), mean(y_hat_eval[,2]), mean(y_hat_eval[,3]))
-se_squared_mean = c(mean(se_squared[,1]), mean(se_squared[,2]), mean(se_squared[,3]))
+mean_beta_hat_1 = c(mean(beta_hat_1[,1]), mean(beta_hat_1[,2]), mean(beta_hat_1[,3]))
+sd_beta_hat_1   = c(sd(beta_hat_1[,1]), sd(beta_hat_1[,2]), sd(beta_hat_1[,3]))
+mean_y_hat_eval = c(mean(y_hat_eval[,1]), mean(y_hat_eval[,2]), mean(y_hat_eval[,3]))
+sd_y_hat_eval   = c(sd(y_hat_eval[,1]), sd(y_hat_eval[,2]), sd(y_hat_eval[,3]))
+mean_se_squared = c(mean(se_squared[,1]), mean(se_squared[,2]), mean(se_squared[,3]))
 
-table_data = data.frame(BETA_1, beta_hat_1_mean, SIGMA ^ 2, se_squared_mean,
-                        rep(y_hat_eval_true, length(SIGMA)), y_hat_eval_mean)
+table_data = data.frame(BETA_1, mean_beta_hat_1, SIGMA ^ 2, mean_se_squared,
+                        y_hat_eval_true, mean_y_hat_eval)
 library("knitr")
 kable(table_data, col.names = c("$\\beta_1$", "$\\text{E}[\\hat{\\beta}_1]$",
                                 "$\\sigma^2$", "$\\text{E}[s_e^2]$", "$\\hat{y}$", 
-                                "$\\text{E}[\\hat{y}(x_{eval})]$"))
+                                "$\\text{E}[\\hat{y}(x_{eval})]$"),
+      caption = "Table 1")
 
 ```
 
@@ -155,7 +158,7 @@ According to these results, we can conclude that
 
 - The simulated $\text{E}[\hat{\beta}_1]$ is very close to $\beta_1$
 - The simulated $\text{E}[s_e^2]$ is very close to $\sigma^2$
-- The simulated $\text{E}[\hat{y}(x_{eval})]$ is close to the true estimate of $\hat{y} = `r y_hat_eval_true`$ but still has some observable residuals.
+- The simulated $\text{E}[\hat{y}(x_{eval})]$ is close to the true estimate of $\hat{y} = `r y_hat_eval_true`$ when $\sigma=`r SIGMA[1]`$, but a little disappoiting when $\sigma$ get larger.
 
 Let's plot the histograms of the simulated values, and overlay the true distributions if appropriate.
 
@@ -222,11 +225,11 @@ for (i in 1:length(SIGMA)) {
 plot_legend(expression(paste("Distribution of ", s[e]^2, " for different ", sigma)), FALSE)
 ```
 
-**Note:** We don't plot the true distribution of $s_e^2$ in the above diagrams because $s_e^2$ follow a Chi-squared distribution,
+**Note:** We don't plot the true distribution of $s_e^2$ in the above diagrams because $\frac{10s_e^2}{\sigma^2}$ follow a Chi-squared distribution,
 $$
 \frac{10s_e^2}{\sigma^2} \sim \chi_{10}^2
 $$
-and we want to show the real value distribution  of $s_e^2$.
+and we want to show the real value distribution of $s_e^2$.
 
 To illustrate how the simulated distribution fit the true Chi-squared distribution, we will need to recalculte $\frac{10s_e^2}{\sigma^2}$ and plot.
 
@@ -250,29 +253,29 @@ plot_legend(substitute("Illustrate distribution of "*frac(DF*s[e]^2, sigma^2), l
 ```
 
 ### Discussion
-**(a)** What is the true distributions of these estimates.
+**(a)** What are the true distributions of these estimates?
 
 As described in the *Model Analysis* section, the true distribution for $\hat{\beta_1}$,
 $$
-\hat{\beta_1}(\sigma=`r SIGMA[1]`) \sim N\left(`r BETA_1`, `r sd_beta_hat_1_true[1] ^ 2` \right)
+\hat{\beta_{1true}}(\sigma=`r SIGMA[1]`) \sim N\left(`r BETA_1`, `r sd_beta_hat_1_true[1] ^ 2` \right)
 $$
 $$
-\hat{\beta_1}(\sigma=`r SIGMA[2]`) \sim N\left(`r BETA_1`, `r sd_beta_hat_1_true[2] ^ 2` \right)
+\hat{\beta_{1true}}(\sigma=`r SIGMA[2]`) \sim N\left(`r BETA_1`, `r sd_beta_hat_1_true[2] ^ 2` \right)
 $$
 $$
-\hat{\beta_1}(\sigma=`r SIGMA[3]`) \sim N\left(`r BETA_1`, `r sd_beta_hat_1_true[3] ^ 2` \right)
+\hat{\beta_{1true}}(\sigma=`r SIGMA[3]`) \sim N\left(`r BETA_1`, `r sd_beta_hat_1_true[3] ^ 2` \right)
 $$
 For $\hat{y}(x_{eval})$,
 $$
-\hat{y}(x_{eval}) (\sigma=`r SIGMA[1]`) \sim N \left(`r y_hat_eval_true`,  `r sd_y_hat_eval_true[1] ^2` \right)
+\hat{y_{true}}(x_{eval}) (\sigma=`r SIGMA[1]`) \sim N \left(`r y_hat_eval_true`,  `r sd_y_hat_eval_true[1] ^2` \right)
 $$
 $$
-\hat{y}(x_{eval}) (\sigma=`r SIGMA[2]`) \sim N \left(`r y_hat_eval_true`,  `r sd_y_hat_eval_true[2] ^2` \right)
+\hat{y_{true}}(x_{eval}) (\sigma=`r SIGMA[2]`) \sim N \left(`r y_hat_eval_true`,  `r sd_y_hat_eval_true[2] ^2` \right)
 $$
 $$
-\hat{y}(x_{eval}) (\sigma=`r SIGMA[1]`) \sim N \left(`r y_hat_eval_true`,  `r sd_y_hat_eval_true[3] ^2` \right)
+\hat{y_{true}}(x_{eval}) (\sigma=`r SIGMA[1]`) \sim N \left(`r y_hat_eval_true`,  `r sd_y_hat_eval_true[3] ^2` \right)
 $$
-We don't have directly true distribution of $s_e^2$, but can use 
+We don't have directly true distribution of $s_e^2$, but it follows, 
 $$
 `r 10/SIGMA[1] ^2`s_e^2 (\sigma=`r SIGMA[1]`) \sim \chi_{10}^2
 $$
@@ -283,17 +286,57 @@ $$
 `r 10/SIGMA[3] ^2`s_e^2 (\sigma=`r SIGMA[3]`) \sim \chi_{10}^2
 $$
 
-**(b)**How do the simulated distributions from the simulations compare to the true distributions? 
-The plots show the simulated distributions fit very well to the tru distribution. Let's get the exact values. 
+**(b)**How do the simulated distributions from the simulations compare to the true distributions?
 
+The plots show the simulated distributions fit very well to the true distribution. Let's list and compare these values. 
 
+```{r}
+table_data = data.frame(BETA_1, mean_beta_hat_1, sd_beta_hat_1_true, sd_beta_hat_1, 
+                        SIGMA ^ 2, mean_se_squared,
+                        y_hat_eval_true, mean_y_hat_eval, sd_y_hat_eval_true, sd_y_hat_eval)
+library("knitr")
+kable(table_data, col.names = c("$\\hat{\\beta_{1true}}$", "$\\text{E}[\\hat{\\beta}_1]$", 
+                                "$\\text{SD}[\\hat{\\beta}_{1true}]$", "$\\text{SD}[\\hat{\\beta}_1]$",
+                                "$\\sigma^2$", "$\\text{E}[s_e^2]$", 
+                                "$\\hat{y_{true}}$", "$\\text{E}[\\hat{y}(x_{eval})]$", 
+                                "$\\text{SD}[\\hat{y_{true}}(x_{eval})]$", "$\\text{SD}[\\hat{y}(x_{eval})]$"),
+      caption = "Table 2")
+```
+
+- The simulated expectations and variances of $\hat{\beta_1}$ are pretty close to the true values. 
+- The variances of simulated $\hat{y}(x_{eval})$ have good match to the true values. However, the expecations have considerable errors when $\sigma$ is large. 
+- $s_e^2$ has good estimate of $\sigma^2$, the plot shows the transformed random variable $\frac{`r DF`s_e^2}{\sigma^2}$ fit the Chi-squred distribution perfectly.
+- We could improve the results by increasing the sample size and simulation time.
 
 **(c)** How do the distributions change when $\sigma$ is changed?
 
+- According to table 2, $\sigma=`r SIGMA[1]`$ give us the best estimates. 
+- Its a little counter intuitive that $\sigma=`r SIGMA[3]`$ perform better than $\sigma=`r SIGMA[2]`$ for most estimates, except $s_e^2$. Thus, we **can not** conclude that the estimates will always get worse when $\sigma$ increases.
 
 ## Simulation Study 2, RMSE for Selection?
 ### Introduction
+In this study, we will simulate from the model
+$$
+Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3} + \beta_4 x_{i4} + \beta_5 x_{i5} + \epsilon_i
+$$
+to select the correct predictor set. We use MSRE for selection and discuss whether this approach always gives us the correct model.
+
 ### Methods
+Assuming we have the known parameters for this MLR model,
+
+- $\beta_0 = 0$
+- $\beta_1 = 6$
+- $\beta_2 = −3.5$
+- $\beta_3 = 1.7$
+- $\beta_4 = -1.1$
+- $\beta_5 = 0.7$
+- $\epsilon_i \sim N(0, \sigma^2)$
+- $\sigma \in (1, 2, 4)$
+
+To investigate how the estimated parameters relate to these known parameters, we will simulate the training data from the sample data found in [`study_2.csv`](study_2.csv). 
+
+To start, we initialize the seed, set constants, load data and allocate memory for these estimates
+
 ### Results
 ### Discussion
 
