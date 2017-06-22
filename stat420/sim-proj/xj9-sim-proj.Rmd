@@ -21,20 +21,20 @@ We will discuss how these estimates relate to true distributions and the impact 
 
 ### Methods
 
-For this MLR model, we assume
+#### Setup
+Assuming we have the known parameters for this MLR model,
 
 - $\beta_0 = 2$
 - $\beta_1 = 1$
 - $\beta_2 = 1$
 - $\beta_3 = 1$
 - $\beta_4 = 1$
-- $\epsilon_i \sim N(0, \sigma^2)$ 
-
-We will train the model with simulating data generated from sample data found in [`study_1.csv`](study_1.csv) and three possible levels of noise. Then predict $\hat{\text{E}}[Y]$ from $x_{i}$. 
-
-- n = 15
+- $\epsilon_i \sim N(0, \sigma^2)$
 - $\sigma \in (1, 5, 10)$
-- $\hat{\text{E}}[Y \mid x_1 = -3, x_2 = 2.5, x_3 = 0.5, x_4 = 0]$, also as $\hat{y}(x_{eval})$
+
+To investigate how the estimated parameters relate to these known parameters, we will simulate the training data from the sample data found in [`study_1.csv`](study_1.csv) (n = 15). We will predict $\hat{\text{E}}[Y]$ from the following $x_{eval}$:
+
+- $x_1 = -3, x_2 = 2.5, x_3 = 0.5, x_4 = 0$, 
 
 To start, we initialize the seed, set constants, load data and allocate memory for these estimates
 
@@ -49,11 +49,11 @@ beta_1 = 1
 beta_2 = 1
 beta_3 = 1
 beta_4 = 1
-p      = 5
 sigma  = c(1, 5, 10)
 x_eval = c(1, -3, 2.5, 0.5, 0)
+p      = length(x_eval)
 
-num_sims = 300
+num_sims = 30
 
 sim_data = read_csv("study_1.csv")
 sample_size = nrow(sim_data)
@@ -63,8 +63,58 @@ se_square  = matrix(data = 0, nrow = num_sims, ncol = length(sigma))
 y_hat_eval = matrix(data = 0, nrow = num_sims, ncol = length(sigma))
 ```
 
+#### Model Analysis
+As we know, given a known MLR model, we have $\hat{\beta}$ distribution as,
+
+$$
+\hat{\beta} \sim N\left(\beta, \sigma^2 \left(X^\top X\right)^{-1}  \right)
+$$ 
+We then have,
+$$
+\text{SD}[\hat{\beta}_1] = \sigma\sqrt{C_{22}}
+$$
+Where,
+$$
+C = \left(X^\top X\right)^{-1}
+$$
+
+For $\hat{y}(x)$, we have, 
+$$
+\hat{y}(x) \sim N \left(x^\top\beta, \sigma^2\left(x^\top\left(X^\top X\right)^{-1}x\right) \right)
+$$
+We then have,
+$$
+\text{E}[\hat{y}(x)] = x^\top\beta
+$$
+and,
+$$
+\text{SD}[\hat{y}(x)] = \sigma \sqrt{x^\top\left(X^\top X\right)^{-1}x}
+$$
+For $s_e$, we know it follow Chi-squared distribution with $(n-p)$ degrees of freedom. In our model, $n=15$, $p=5$, thus $df=10$, we have,
+$$
+\frac{10s_e^2}{\sigma^2} \sim \chi_{10}^2
+$$
+
+Let's compute $\text{SD}[{\beta_1}]$, $\text{E}[\hat{y}(x_{eval})]$ and $\text{SD}[\hat{y}(x_{eval})]$ for each $\sigma$ for later comparison.
+
+```{r}
+sd_beta_hat_1_true = rep(0, length(sigma))
+sd_y_hat_eval_true = rep(0, length(sigma))
+
+X = cbind(rep(1, sample_size), sim_data$x1, sim_data$x2, sim_data$x3, sim_data$x4)
+C = solve(t(X) %*% X)
+
+for (i in 1:length(sigma)) {
+  sd_beta_hat_1_true[i] = sigma[i] * sqrt(C[1 + 1, 1 + 1])
+  sd_y_hat_eval_true[i] = sigma[i] * sqrt(t(x_eval) %*% C %*% x_eval)
+}
+
+y_hat_eval_true = (t(x_eval) %*% c(beta_0, beta_1, beta_2, beta_3, beta_4))[1]
+```
+
+
 #### Simulation
-We now perform the simulation `r num_sims` times for each $\sigma$. Each time, we update the $y$ variable in the data frame, leaving the $x$ variables the same. We then fit a model, and store $\hat{\beta}_1$, $s_e^2$ and compute $\hat{y}(x_{eval})$.
+We now perform the simulation `r num_sims` times for each $\sigma$. Each time, we update the $y$ variable in the data frame, leaving the $x$ variables the same. We then fit a model, and store the estimated $\hat{\beta}_1$, $s_e^2$ and $\hat{y}(x_{eval})$.
 
 ```{r}
 for (s in 1:length(sigma)) {
@@ -83,29 +133,7 @@ for (s in 1:length(sigma)) {
 
 ```
 
-As we know, given a MLR model, we have
 
-- $\text{SD}[\hat{\beta}_1] = s_e \sqrt{C_{22}}$
-- $\text{SD}[\hat{y}(x_{eval})] = \sigma \sqrt{x_{eval}^\top\left(X^\top X\right)^{-1}x_{eval}}$
-- $y(x_{eval}) = x_{eval}^\top\beta$
-
-
-We compute $\text{SD}[{\beta_1}]$ and $\text{SD}[\hat{y}(x_{eval})]$ for each $\sigma$ for later comparison.
-
-```{r}
-sd_beta_hat_1_true = rep(0, length(sigma))
-sd_y_hat_eval_true = rep(0, length(sigma))
-
-X = cbind(rep(1, sample_size), sim_data$x1, sim_data$x2, sim_data$x3, sim_data$x4)
-C = solve(t(X) %*% X)
-
-for (i in 1:length(sigma)) {
-  sd_beta_hat_1_true[i] = sigma[i] * sqrt(C[1 + 1, 1 + 1])
-  sd_y_hat_eval_true[i] = sigma[i] * sqrt(t(x_eval) %*% C %*% x_eval)
-}
-
-y_hat_eval_true = (t(x_eval) %*% c(beta_0, beta_1, beta_2, beta_3, beta_4))[1]
-```
 
 ### Results
 We list the mean of $\hat{\beta}_1$ (Mean of Estimated Beta_1), mean of $s_e^2$ (Mean of Squred SE) and mean of $\hat{y}(x_{eval})$ (Mean of Estimated Y) as following table.
@@ -159,8 +187,6 @@ for (i in 1:length(sigma)) {
   curve(dchisq(x ^ 2, df = sample_size - p), 
         col = "darkorange", add = TRUE, lwd = 3)
 }
-
-
 ```
 
 ### Discussion
