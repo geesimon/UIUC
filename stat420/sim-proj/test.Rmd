@@ -1,4 +1,4 @@
-```{r}
+```{r, message=FALSE}
 library(readr)
 
 birthday = 19720816
@@ -39,7 +39,7 @@ sample_size       = nrow(sim_data)
 SIGMA     = c(1, 2, 4)
 NUM_SIGMA = length(SIGMA)
 
-NUM_SIMS = 50
+NUM_SIMS = 500
 
 #allocate a rmse matrix for each formula
 train_rmse = vector("list", NUM_FORMULA)
@@ -61,11 +61,10 @@ cal_rmse = function(y, y_hat) {
   e = y - y_hat
   sqrt(sum(e ^ 2) / n)
 }
-
-rmse_frame = data.frame(col.names = c("formula", "sigma", "iteration", "rmse"))
-
-for (f in 1:NUM_FORMULA) {
+  
   models = vector("list", NUM_FORMULA)
+for (f in 1:NUM_FORMULA) {
+  
   
   for(s in 1:NUM_SIGMA) {
     for(i in 1:NUM_SIMS) {
@@ -89,12 +88,14 @@ for (f in 1:NUM_FORMULA) {
       test_y_hat = predict(models[[f]], data = test_data)
       test_rmse[[f]][s, i] = cal_rmse(test_data$y, test_y_hat)
     }
+    
+    mean_train_rmse[f, s] = mean(train_rmse[[f]][s,])
+    mean_test_rmse[f, s]  = mean(test_rmse[[f]][s,])
   }
   
   #Calculate the average Train RMSE and average Test RMSE
   for(s in 1:NUM_SIGMA) {
-    mean_train_rmse[f, s] = mean(train_rmse[[f]][s,])
-    mean_test_rmse[f, s]  = mean(test_rmse[[f]][s,])
+
   }
 }
 ```
@@ -106,7 +107,8 @@ for (i in 1:NUM_SIGMA){
   barplot(t(mean_train_rmse)[i,], names.arg = barnames,
           xlab = "Formula",
           ylab = "Average RMSE",
-          col = "dodgerblue")  
+          col = "dodgerblue")
+  
 }
 ```
 
