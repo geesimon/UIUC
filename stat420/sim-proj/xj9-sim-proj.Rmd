@@ -52,7 +52,7 @@ BETA_4 = 1
 SIGMA  = c(1, 5, 10)
 X_EVAL = c(1, -3, 2.5, 0.5, 0)
 
-NUM_SIMS = 3
+NUM_SIMS = 3000
 
 sim_data = read_csv("study_1.csv")
 sample_size = nrow(sim_data)
@@ -252,7 +252,7 @@ plot_legend(substitute("Illustrate distribution of "*frac(DF*s[e]^2, sigma^2), l
 ```
 
 ### Discussion
-**(a)** What are the true distributions of these estimates?
+**(A)** What are the true distributions of these estimates?
 
 As described in the *Model Analysis* section, the true distribution for $\hat{\beta_1}$,
 $$
@@ -285,7 +285,7 @@ $$
 `r 10/SIGMA[3] ^2`s_e^2 (\sigma=`r SIGMA[3]`) \sim \chi_{10}^2
 $$
 
-**(b)**How do the empirical distributions from the simulations compare to the true distributions?
+**(B)**How do the empirical distributions from the simulations compare to the true distributions?
 
 The plots show the empirical distributions fit very well to the true distribution. Let's list and compare these values. 
 
@@ -307,7 +307,7 @@ kable(table_data, col.names = c("$\\hat{\\beta_{1true}}$", "$\\text{E}[\\hat{\\b
 - $s_e^2$ has good estimate of $\sigma^2$, the plot shows the transformed random variable $\frac{`r DF`s_e^2}{\sigma^2}$ fit the Chi-squred distribution perfectly.
 - We could improve the results by increasing the sample size and simulation time.
 
-**(c)** How do the distributions change when $\sigma$ is changed?
+**(C)** How do the distributions change when $\sigma$ is changed?
 
 - According to the results, when $\sigma$ increase, the variance of estimates also increase.
 - According to table 2, $\sigma=`r SIGMA[1]`$ give us the best estimates. 
@@ -315,31 +315,190 @@ kable(table_data, col.names = c("$\\hat{\\beta_{1true}}$", "$\\text{E}[\\hat{\\b
 
 ## Simulation Study 2, RMSE for Selection?
 ### Introduction
-In this study, we will simulate from the model
+In this study, we will investigate the use of RMSE to select the best MLR model. We will see the minimum RMSE cannot garantee the best model and will also discuss the impact of different noise.
+
+### Methods
+#### Setup
+Assuming we have the known best MLR model,
 $$
 Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3} + \beta_4 x_{i4} + \beta_5 x_{i5} + \epsilon_i
 $$
-to select the correct predictor set. We use MSRE for selection and discuss whether this approach always gives us the correct model.
-
-### Methods
-Assuming we have the known parameters for this MLR model,
-
+where,
 - $\beta_0 = 0$
 - $\beta_1 = 6$
-- $\beta_2 = ???3.5$
+- $\beta_2 = -3.5$
 - $\beta_3 = 1.7$
 - $\beta_4 = -1.1$
 - $\beta_5 = 0.7$
 - $\epsilon_i \sim N(0, \sigma^2)$
 - $\sigma \in (1, 2, 4)$
 
-To investigate how the estimated parameters relate to these known parameters, we will simulate the training data from the sample data found in [`study_2.csv`](study_2.csv). 
+We will try to find this best model from the nine candidates with forms:
+
+- y ~ x1
+- y ~ x1 + x2
+- y ~ x1 + x2 + x3
+- y ~ x1 + x2 + x3 + x4
+- y ~ x1 + x2 + x3 + x4 + x5, the correct form of the model
+- y ~ x1 + x2 + x3 + x4 + x5 + x6
+- y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7
+- y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8
+- y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9
 
 To start, we initialize the seed, set constants, load data and allocate memory for these estimates
+```{r, message=FALSE}
+library(readr)
+
+birthday = 19720816
+set.seed(birthday)
+
+BETA_0 = 0
+BETA_1 = 6
+BETA_2 = -3.5
+BETA_3 = 1.7
+BETA_4 = -1.1
+BETA_5 = 0.7
+
+FORMULA = list(y ~ x1, 
+              y ~ x1 + x2, 
+              y ~ x1 + x2 + x3,
+              y ~ x1 + x2 + x3 + x4,
+              y ~ x1 + x2 + x3 + x4 + x5, #Correct formula
+              y ~ x1 + x2 + x3 + x4 + x5 + x6,
+              y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7, 
+              y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8,
+              y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9)
+NUM_FORMULA = length(FORMULA)
+
+sim_data    = read_csv("study_2.csv")
+sample_size = nrow(sim_data)
+
+SIGMA     = c(1, 2, 4)
+NUM_SIGMA = length(SIGMA)
+
+NUM_SIMS = 500
+
+#allocate a rmse matrix for each formula
+train_rmse = vector("list", NUM_FORMULA)
+for (i in 1:NUM_FORMULA) {
+  train_rmse[[i]] = matrix(0, nrow = NUM_SIGMA, ncol = NUM_SIMS)
+}
+mean_train_rmse = data.frame(0, nrow = NUM_FORMULA, ncol = NUM_SIGMA)
+
+test_rmse  = vector("list", NUM_FORMULA)
+for (i in 1:NUM_FORMULA) {
+  test_rmse[[i]] = matrix(0, nrow = NUM_SIGMA, ncol = NUM_SIMS)
+}
+mean_test_rmse = matrix(0, nrow = NUM_FORMULA, ncol = NUM_SIGMA)
+```
+
+#### Simulation
+We will simulate from the best model with the sample data found in [`study_2.csv`](study_2.csv) (600 records) and three possible levels of noise.
+
+- $n = 600$
+- $\sigma \in (1, 2, 4)$
+
+Each time we simulate the data, we randomly split the data into train and test sets of equal sizes (300 observations for training, 300 observations for testing).
+
+For each model, calculate Train and Test RMSE.
+$$
+\text{RMSE}(\text{model, data}) = \sqrt{\frac{1}{n} \sum_{i = 1}^{n}(y_i - \hat{y}_i)^2}
+$$
+Repeat this process with 500 simulations for each of the 3 values of $\sigma$ and we have fit $9×3×500=13500$ models.
+```{r}
+cal_rmse = function(y, y_hat) {
+  n = length(y)
+  e = y - y_hat
+  sqrt(sum(e ^ 2) / n)
+}
+  
+for (f in 1:NUM_FORMULA) {
+  models = vector("list", NUM_FORMULA)
+  
+  for(s in 1:NUM_SIGMA) {
+    for(i in 1:NUM_SIMS) {
+      eps           = rnorm(sample_size, mean = 0 , sd = SIGMA[s])
+      sim_data$y    = BETA_0 + BETA_1 * sim_data$x1 + BETA_2 * sim_data$x2 + 
+                      BETA_3 * sim_data$x3 + BETA_4 * sim_data$x4 + BETA_5 * sim_data$x5 + 
+                      eps
+      
+      #Split data into train and test sets
+      train_index = sample(1:sample_size, nrow(sim_data)/2)
+      train_data  = sim_data[train_index,]
+      test_data   = sim_data[-train_index,]
+      
+      #Train models and calculate RMSE
+      models[[f]] = lm(FORMULA[[f]], data = train_data)
+        
+      #Calculate RMSE for train data
+      train_rmse[[f]][s, i] = cal_rmse(train_data$y, models[[f]]$fitted.values)
+  
+      #Calculate RMSE for test data
+      test_y_hat = predict(models[[f]], data = test_data)
+      test_rmse[[f]][s, i] = cal_rmse(test_data$y, test_y_hat)
+    }
+    
+    #Calculate the average Train RMSE and average Test RMSE
+    mean_train_rmse[f, s] = mean(train_rmse[[f]][s,])
+    mean_test_rmse[f, s]  = mean(test_rmse[[f]][s,])
+  }
+}
+```
 
 ### Results
-### Discussion
+Let's draw the results in plots to compare the average RMSE of train and test data for different $\sigma$ and models,
+```{r fig.width = 12, fig.height = 12}
+par(mfrow = c(2,2))
 
+for (i in 1:NUM_SIGMA){
+  barplot(t(mean_test_rmse)[i,], names.arg = c("1", "2", "3","4", "5", "6","7", "8", "9" ),
+          xlab = "Models",
+          ylab = "Average RMSE",
+          main = substitute(sigma==value,list(value=SIGMA[i])),
+          col = "dodgerblue")
+  
+  barplot(t(mean_train_rmse)[i,], col = "grey", add = TRUE)
+}
+
+plot.new()
+plot.window(c(0,10), c(0,10))
+text(5, 0.5, substitute("RMSE with different " * sigma), 
+      col = "black", cex = 2)
+rect(0, 3, 2, 4, col = "dodgerblue")
+text(4, 3.5, "Test RMSE", cex = 1.5)
+rect(0, 5, 2, 6, col = "grey")
+text(4, 5.5, "Train RMSE", cex = 1.5)
+```
+
+**Note:** We overlap the values of train and test RMSE in same map for easy comparison.
+
+The results show,
+
+- For a given $\sigma$, the differences of avearge RMSE among all nine models are small ((max - min) / max < 7%).
+- For any $\sigma$, model 5 never has the minimum average RMSE from both the train and test data.
+
+Therefore, we can conclude that **minimum RMSE cannot garantee to select the best model**.
+
+### Discussion
+**(A)** Does the method **always** select the correct model? On average, does is select the correct model?
+
+**No.** As illustrated in our study, minimum RMSE won't always select the correct model especially when the RMSE among models are very close. On average, RMSE can help to select the correct model if the differences of RMSE are significant.
+
+**(B)**How does the level of noise affect the results?
+
+For given a $\sigma$, averages RSME of all models are,
+
+- `r mean(t(mean_test_rmse)[1,])` ($\sigma=`r SIGMA[1]`$)
+- `r  mean(t(mean_test_rmse)[2,])` ($\sigma=`r SIGMA[2]`$)
+- `r mean(t(mean_test_rmse)[3,])` ($\sigma=`r SIGMA[3]`$)
+
+Therefore, we say RMSE will increase when noise ($\sigma$) increase. 
+
+It may be obvious from the plot that for **train** data, the RMSE difference among models descrease when noise ($\sigma$) increase. However, it is not always the case for the test data. The max/min RMSE differences are,
+
+- `r max(t(mean_test_rmse)[1,])-min(t(mean_test_rmse)[1,])` ($\sigma=`r SIGMA[1]`$)
+- `r max(t(mean_test_rmse)[2,])-min(t(mean_test_rmse)[2,])` ($\sigma=`r SIGMA[2]`$)
+- `r max(t(mean_test_rmse)[3,])-min(t(mean_test_rmse)[3,])` ($\sigma=`r SIGMA[3]`$)
 
 ## Simulation Study 3, Power
 ### Introduction
