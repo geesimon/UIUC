@@ -16,8 +16,10 @@ In this simulation study we will investigate the distribution of regression esti
 $$
 Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3}  + \beta_4 x_{i4} + \epsilon_i
 $$
-We will discuss how these estimates relate to true distributions and the impact of different noise.
 
+where $\epsilon_i \sim N(0, \sigma^2)$.
+
+We will discuss how these estimates relate to true distributions and the impact of different noise.
 
 ### Methods
 
@@ -29,7 +31,6 @@ Assuming we have the known parameters for this MLR model,
 - $\beta_2 = 1$
 - $\beta_3 = 1$
 - $\beta_4 = 1$
-- $\epsilon_i \sim N(0, \sigma^2)$
 - $\sigma \in (1, 5, 10)$
 
 To investigate how the estimated parameters relate to these known parameters, we will simulate the training data from the sample data found in [`study_1.csv`](study_1.csv). We will predict $\hat{\text{E}}[Y]$ from the following $x_{eval}$:
@@ -52,7 +53,7 @@ BETA_4 = 1
 SIGMA  = c(1, 5, 10)
 X_EVAL = c(1, -3, 2.5, 0.5, 0)
 
-NUM_SIMS = 30
+NUM_SIMS = 3000
 
 sim_data = read_csv("study_1.csv")
 sample_size = nrow(sim_data)
@@ -96,7 +97,7 @@ $$
 \frac{`r DF`s_e^2}{\sigma^2} \sim \chi_{`r DF`}^2
 $$
 
-Let's compute the **true** $\text{SD}[{\beta_1}]$, $\text{E}[\hat{y}(x_{eval})]$ and $\text{SD}[\hat{y}(x_{eval})]$ for each $\sigma$.
+Let's compute the **true** $\text{SD}[\hat{\beta_1}]$, $\text{E}[\hat{y}(x_{eval})]$ and $\text{SD}[\hat{y}(x_{eval})]$ for each $\sigma$.
 
 ```{r}
 sd_beta_hat_1_true = rep(0, length(SIGMA))
@@ -124,15 +125,12 @@ for (s in 1:length(SIGMA)) {
     fit           = lm(y ~ ., data = sim_data)
     
     beta_hat_1[i, s]  = coef(fit)[2]
-    se_squared[i, s]  = sum(fit$residuals ^ 2) / (sample_size - ncol(sim_data))
+    se_squared[i, s]  = sum(fit$residuals ^ 2) / DF
     y_hat_eval[i, s]  = predict(fit, newdata = data.frame(x1 = X_EVAL[2], x2 = X_EVAL[3],
                                                           x3 = X_EVAL[4], x4 = X_EVAL[5] ))
   }
 }
-
 ```
-
-
 
 ### Results
 We list the empirical $\text{E}[\hat{\beta}_1]$, $\text{E}[s_e^2]$ and $\text{E}[\hat{y}(x_{eval})]$ as following table.
@@ -159,7 +157,7 @@ According to these results, we can conclude that
 - The empirical $\text{E}[s_e^2]$ is very close to $\sigma^2$
 - The empirical $\text{E}[\hat{y}(x_{eval})]$ is close to the true estimate of $\hat{y} = `r y_hat_eval_true`$ when $\sigma=`r SIGMA[1]`$, but a little disappoiting when $\sigma$ get larger.
 
-Let's plot the histograms of the empirical values, and overlay the true distributions if appropriate.
+Let's plot the histograms of the empirical values, and overlap the true distributions if appropriate.
 
 ```{r fig.width = 12, fig.height = 12}
 plot_legend = function (title, showTrue = TRUE) {
@@ -272,7 +270,7 @@ $$
 \hat{y_{true}}(x_{eval}) (\sigma=`r SIGMA[2]`) \sim N \left(`r y_hat_eval_true`,  `r sd_y_hat_eval_true[2] ^2` \right)
 $$
 $$
-\hat{y_{true}}(x_{eval}) (\sigma=`r SIGMA[1]`) \sim N \left(`r y_hat_eval_true`,  `r sd_y_hat_eval_true[3] ^2` \right)
+\hat{y_{true}}(x_{eval}) (\sigma=`r SIGMA[3]`) \sim N \left(`r y_hat_eval_true`,  `r sd_y_hat_eval_true[3] ^2` \right)
 $$
 We don't have directly true distribution of $s_e^2$, but it follows, 
 $$
@@ -304,18 +302,18 @@ kable(table_data, col.names = c("$\\hat{\\beta_{1true}}$", "$\\text{E}[\\hat{\\b
 
 - The empirical expectations and variances of $\hat{\beta_1}$ are pretty close to the true values. 
 - The variances of empirical $\hat{y}(x_{eval})$ have good match to the true values. However, the expecations have considerable errors when $\sigma$ is large. 
-- $s_e^2$ has good estimate of $\sigma^2$, the plot shows the transformed random variable $\frac{`r DF`s_e^2}{\sigma^2}$ fit the Chi-squred distribution perfectly.
+- $s_e^2$ has good estimate of $\sigma^2$, the plot shows $\frac{`r DF`s_e^2}{\sigma^2}$ fit the Chi-squred distribution perfectly.
 - We could improve the results by increasing the sample size and simulation time.
 
 **(C)** How do the distributions change when $\sigma$ is changed?
 
 - According to the results, when $\sigma$ increase, the variance of estimates also increase.
 - According to table 2, $\sigma=`r SIGMA[1]`$ give us the best estimates. 
-- Its a little counter intuitive that $\sigma=`r SIGMA[3]`$ perform better than $\sigma=`r SIGMA[2]`$ for most estimates, except $s_e^2$. Thus, we **can not** conclude that the estimates will always get worse when $\sigma$ increases.
+- Its a little counter intuitive that not all estimates of smaller $\sigma=`r SIGMA[2]`$ are better than larger $\sigma=`r SIGMA[3]`$. In our case, only $s_e^2$ is better.Thus, we **may not** conclude that the estimates will always get worse when $\sigma$ increases.
 
 ## Simulation Study 2, RMSE for Selection?
 ### Introduction
-In this study, we will investigate the use of RMSE to select the best MLR model. We will see the minimum RMSE cannot garantee the best model and will also discuss the impact of different noise.
+In this study, we will investigate the use of RMSE to select the best MLR model. We will see compare RMSE cannot garantee the best model and will also discuss the impact of different noise.
 
 ### Methods
 #### Setup
@@ -324,6 +322,7 @@ $$
 Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3} + \beta_4 x_{i4} + \beta_5 x_{i5} + \epsilon_i
 $$
 where,
+
 - $\beta_0 = 0$
 - $\beta_1 = 6$
 - $\beta_2 = -3.5$
@@ -376,7 +375,7 @@ sample_size = nrow(sim_data)
 SIGMA     = c(1, 2, 4)
 NUM_SIGMA = length(SIGMA)
 
-NUM_SIMS = 5
+NUM_SIMS = 500
 
 #allocate a rmse matrix for each formula
 train_rmse = vector("list", NUM_FORMULA)
@@ -477,12 +476,12 @@ The results show,
 - For a given $\sigma$, the differences of avearge RMSE among all nine models are small ((max - min) / max < 7%).
 - For any $\sigma$, model 5 never has the minimum average RMSE from both the train and test data.
 
-Therefore, we can conclude that **minimum RMSE cannot garantee to select the best model**.
+Therefore, we can conclude that **minimum RMSE cannot garantee to indicate the best model**.
 
 ### Discussion
 **(A)** Does the method **always** select the correct model? On average, does is select the correct model?
 
-**No.** As illustrated in our study, minimum RMSE won't always select the correct model especially when the RMSE among models are very close. On average, RMSE can help to select the correct model if the differences of RMSE are significant.
+**No.** As illustrated in our study, minimum RMSE won't always indicate the correct model especially when the RMSE among models are very close. On average, RMSE can help to select the correct model if the differences of RMSE are significant.
 
 **(B)**How does the level of noise affect the results?
 
@@ -494,7 +493,7 @@ For given a $\sigma$, averages RSME of all models are,
 
 Therefore, we say RMSE will increase when noise ($\sigma$) increase. 
 
-It may be obvious from the plot that for **train** data, the RMSE difference among models descrease when noise ($\sigma$) increase. However, it is not always the case for the test data. The max/min RMSE differences are,
+It may be obvious that by checking the result of **train** data, the overall RMSE difference among models descrease when noise ($\sigma$) increase. However, it is not always the case for the test data. The max/min RMSE differences are,
 
 - `r max(t(mean_test_rmse)[1,])-min(t(mean_test_rmse)[1,])` ($\sigma=`r SIGMA[1]`$)
 - `r max(t(mean_test_rmse)[2,])-min(t(mean_test_rmse)[2,])` ($\sigma=`r SIGMA[2]`$)
@@ -502,7 +501,7 @@ It may be obvious from the plot that for **train** data, the RMSE difference amo
 
 ## Simulation Study 3, Power
 ### Introduction
-In this study, we will exam how power of SLR model is affected by factors as,
+In this study, we will exam how power of SLR is affected by factors
 
 - Signal Strength, $\beta_1$
 - Noise Level, $\sigma$
@@ -525,9 +524,9 @@ Y_i = \beta_0 + \beta_1 x_i + \epsilon_i
 $$
 where $\epsilon_i \sim N(0, \sigma^2)$.
 
-For simplicity, we will let $\beta_0 = 0$, thus $\beta_1$ is essentially controlling the amount of “signal.” We will then consider different signals and noises:
+For simplicity, we will let $\beta_0 = 0$, thus $\beta_1$ is essentially controlling the amount of “signal.” We will then consider different signals and noises
  
-- $\beta_1 \in (0, 0.1, 0.2, 0.3, \ldots 3)$
+- $\beta_1 \in (0, 0.1, 0.2, 0.3, 3)$
 - $\sigma \in (1, 2, 4)$
 
 As well as three significance levels:
@@ -550,7 +549,7 @@ sample_size = 25
 x_values    = seq(0, 5, length = sample_size)
 ```
 #### Simulation
-For each possible $\beta_1$ and $\sigma$ combination, we simulate from the true model 1000 times. Each time perform the significance of the regression test. 
+For each possible $\beta_1$ and $\sigma$ combination, we simulate from the true model 1000 times. Each time perform the significance of the regression test. We store the result to a data frame for later usage.
 ```{r}
 calc_power = function() {
   NUM_BETA_1 = length(BETA_1)
@@ -587,7 +586,7 @@ result = calc_power()
 ```
 
 ### Results
-Let's create three plots, one for each value of $\sigma$. Within each of these plots, we add a “power curve” for each value of $\alpha$ that shows how power is affected by signal strength, $\beta_1$.
+Let's create three plots, one for each value of $\sigma$. Within each of these plots, we add a “power curve” for each value of $\alpha$ that shows how power is affected by signal strength $\beta_1$.
 
 ```{r fig.width = 12, fig.height = 12}
 plot_power = function (data) {
@@ -629,7 +628,7 @@ According to the plots above, its obvious $\alpha$, $\beta_1$, and $\sigma$ affe
 
 - When $\alpha$ **increase**, power also **increase**. Since $\alpha$ is used to measure significance of regression test, larger $\alpha$ means we would reject more $H_0$, thus give us larger power.
 - When $\beta_1$ **increase**, power also **increase**. Essentially, power is the probability that a signal of a particular strength will be detected. $\beta_1$ is considered as "signal" and larger signal is more easier to be detected. When $\beta_1$ is big enough (3 in our study), the power will converge to 1.
-- When $\sigma$ **increase**, power **decrease**. This also makes sense as $\sigma$ is considered as "noise", strong "noise" will bury  "signal" and thus make "signal" harder to be detected.  
+- When $\sigma$ **increase**, power **decrease**. This also makes sense since $\sigma$ is considered as "noise". Strong "noise" will bury  "signal" and thus make "signal" harder to be detected.  
 
 Let's decrease the $\beta_1$ range for better illustration.
 ```{r fig.width = 12, fig.height = 12}
@@ -640,9 +639,9 @@ plot_power(calc_power())
 
 **(B)** Are 1000 simulations sufficient?
 
-Yes. Although more simulations usually give us less estimation error, we already see very stable and obvious trend from the output with 1000 simulations. Increase simulation times won't give us much benefit from this study. 
+Yes. Although more simulations usually give us less estimation error, we can see very stable and obvious trend from the output with 1000 simulations. Increase simulation times won't give us much benefit for this study. 
 
-In another hand, reduce the simulation would make our conclusion not that obvious. For example, let's reduce the simulation to 100 and redraw the results.
+In another hand, reducing the simulation time would make our conclusion not that obvious. For example, let's reduce the simulation to 100 and redraw the results.
 
 ```{r fig.width = 12, fig.height = 12}
 NUM_SIMS   = 100
@@ -650,4 +649,4 @@ NUM_SIMS   = 100
 plot_power(calc_power())
 ```
 
-According to the plots, we can find some bumps (especially when $\sigma$ is large and $\beta_1$ is small) which make our findings not that obvious.
+According to the plots, we do find some bumps (especially when $\sigma$ is large and $\beta_1$ is small) which make the trend on the slope not that obvious.
