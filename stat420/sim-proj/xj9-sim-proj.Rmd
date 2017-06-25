@@ -36,8 +36,8 @@ To investigate how the estimated parameters relate to these known parameters, we
 
 - $x_1 = -3, x_2 = 2.5, x_3 = 0.5, x_4 = 0$, 
 
-To start, we initialize the seed, set constants, load data and allocate memory for these estimates
-
+To start, we initialize the seed, set constants, load data and allocate memory for these estimates.
+.
 ```{r, message=FALSE}
 library(readr)
 
@@ -52,7 +52,7 @@ BETA_4 = 1
 SIGMA  = c(1, 5, 10)
 X_EVAL = c(1, -3, 2.5, 0.5, 0)
 
-NUM_SIMS = 3000
+NUM_SIMS = 30
 
 sim_data = read_csv("study_1.csv")
 sample_size = nrow(sim_data)
@@ -194,7 +194,7 @@ for (i in 1:length(SIGMA)) {
   curve(dnorm(x, mean = BETA_1, sd = sd_beta_hat_1_true[i]), 
         col = "darkorange", add = TRUE, lwd = 3)
 }
-plot_legend(expression(paste("Distribution of ", hat(beta)[1], " for different ", sigma)))
+plot_legend(expression(paste("Distribution of ", hat(beta)[1], " by different ", sigma)))
 ```
 
 ```{r fig.width = 12, fig.height = 12}
@@ -208,7 +208,7 @@ for (i in 1:length(SIGMA)) {
         col = "darkorange", add = TRUE, lwd = 3)
 }
 
-plot_legend(expression(paste("Distribution of ", hat(y), " for different ", sigma)))
+plot_legend(expression(paste("Distribution of ", hat(y), " by different ", sigma)))
 ```
 
 ```{r fig.width = 12, fig.height = 12}
@@ -221,7 +221,7 @@ for (i in 1:length(SIGMA)) {
        border = "dodgerblue")
 }
 
-plot_legend(expression(paste("Distribution of ", s[e]^2, " for different ", sigma)), FALSE)
+plot_legend(expression(paste("Distribution of ", s[e]^2, " by different ", sigma)), FALSE)
 ```
 
 **Note:** We don't plot the true distribution of $s_e^2$ in the above diagrams because $\frac{10s_e^2}{\sigma^2}$ follow a Chi-squared distribution,
@@ -345,7 +345,7 @@ We will try to find this best model from the nine candidates with forms:
 - y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8
 - y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9
 
-To start, we initialize the seed, set constants, load data and allocate memory for these estimates
+To start, we initialize the seed, set constants, load data and allocate memory for these estimates.
 ```{r, message=FALSE}
 library(readr)
 
@@ -376,7 +376,7 @@ sample_size = nrow(sim_data)
 SIGMA     = c(1, 2, 4)
 NUM_SIGMA = length(SIGMA)
 
-NUM_SIMS = 500
+NUM_SIMS = 5
 
 #allocate a rmse matrix for each formula
 train_rmse = vector("list", NUM_FORMULA)
@@ -446,7 +446,7 @@ for (f in 1:NUM_FORMULA) {
 ```
 
 ### Results
-Let's draw the results in plots to compare the average RMSE of train and test data for different $\sigma$ and models,
+Let's draw the results in plots to compare the average RMSE of train and test data by different $\sigma$ and models,
 ```{r fig.width = 12, fig.height = 12}
 par(mfrow = c(2,2))
 
@@ -462,7 +462,7 @@ for (i in 1:NUM_SIGMA){
 
 plot.new()
 plot.window(c(0,10), c(0,10))
-text(5, 0.5, substitute("RMSE with different " * sigma), 
+text(5, 0.5, substitute("RMSE by different " * sigma), 
       col = "black", cex = 2)
 rect(0, 3, 2, 4, col = "dodgerblue")
 text(4, 3.5, "Test RMSE", cex = 1.5)
@@ -502,7 +502,152 @@ It may be obvious from the plot that for **train** data, the RMSE difference amo
 
 ## Simulation Study 3, Power
 ### Introduction
-### Methods
-### Results
-### Discussion
+In this study, we will exam how power of SLR model is affected by factors as,
 
+- Signal Strength, $\beta_1$
+- Noise Level, $\sigma$
+- Significance Level, $\alpha$
+
+We estimate power use 
+$$
+\hat{\text{Power}} = \hat{P}[\text{Reject } H_0 \mid H_1 \text{ True}] = \frac{\text{# Tests Rejected}}{\text{# Simulations}}
+$$
+where
+$$
+H_0: \beta_{1} = 0 \ \text{vs} \ H_1: \beta_{1} \neq 0
+$$
+
+### Methods
+#### Setup
+Assuming we have the a SLR model
+$$
+Y_i = \beta_0 + \beta_1 x_i + \epsilon_i
+$$
+where $\epsilon_i \sim N(0, \sigma^2)$.
+
+For simplicity, we will let $\beta_0 = 0$, thus $\beta_1$ is essentially controlling the amount of “signal.” We will then consider different signals and noises:
+ 
+- $\beta_1 \in (0, 0.1, 0.2, 0.3, \ldots 3)$
+- $\sigma \in (1, 2, 4)$
+
+As well as three significance levels:
+
+- $\alpha \in (0.01, 0.05, 0.10)$
+
+To start, we initialize the seed and set constants.
+```{r}
+birthday = 19720816
+set.seed(birthday)
+
+BETA_0  = 0
+BETA_1  = c(0, 0.1, 0.2, 0.3, 3)
+SIGMA   = c(1,2,4)
+ALPHA   = c(0.01,0.05,0.10)
+
+NUM_SIMS   = 1000
+
+sample_size = 25
+x_values    = seq(0, 5, length = sample_size)
+```
+#### Simulation
+For each possible $\beta_1$ and $\sigma$ combination, we simulate from the true model 1000 times. Each time perform the significance of the regression test. 
+```{r}
+calc_power = function() {
+  NUM_BETA_1 = length(BETA_1)
+  NUM_SIGMA  = length(SIGMA)
+  NUM_ALPHA  = length(ALPHA)
+  result = data.frame()
+    
+  for (s in 1:NUM_SIGMA) {
+    for (b in 1:NUM_BETA_1) {
+      reject_num = rep(0, NUM_ALPHA)
+        
+      p_values  = rep(0, NUM_SIMS)
+      for (i in 1:NUM_SIMS) {
+        eps      = rnorm(sample_size, mean = 0 , sd = SIGMA[s])
+        y_values = BETA_0 + BETA_1[b] * x_values  + eps
+          
+        model    = lm(y_values ~ x_values)
+          
+        p_values[i] = summary(model)$coefficient["x_values","Pr(>|t|)"]
+      }
+        
+      for (a in 1:NUM_ALPHA) {
+        power  = sum(p_values < ALPHA[a]) / NUM_SIMS
+        result = rbind(result, data.frame(sigma = SIGMA[s], beta_1 = BETA_1[b],
+                                          alpha = ALPHA[a], power = power))
+      }
+    }
+  }
+  
+  result
+}
+
+result = calc_power()
+```
+
+### Results
+Let's create three plots, one for each value of $\sigma$. Within each of these plots, we add a “power curve” for each value of $\alpha$ that shows how power is affected by signal strength, $\beta_1$.
+
+```{r fig.width = 12, fig.height = 12}
+plot_power = function (data) {
+  NUM_SIGMA  = length(SIGMA)
+  NUM_ALPHA  = length(ALPHA)
+  line_colors = c("dodgerblue", "darkorange", "red")
+  par(mfrow = c(2,2))
+  
+  for (s in 1:NUM_SIGMA){
+    data_by_sigma = data[data$sigma == SIGMA[s],]
+    
+    plot(data_by_sigma$power ~ data_by_sigma$beta_1,
+         xlab = expression(beta[1]), ylab = "Power",
+         main = substitute(sigma==value,list(value=SIGMA[s])))
+    
+    for (i in 1:NUM_ALPHA) {
+      data_by_alpha = data_by_sigma[data_by_sigma$alpha == ALPHA[i], ]
+      lines(data_by_alpha$beta_1, data_by_alpha$power, col = line_colors[i], lwd = 3)
+    }
+    
+    lengend_str = c(substitute(alpha==value1, list(value1=ALPHA[1])), 
+                    substitute(alpha==value2, list(value2=ALPHA[2])), 
+                    substitute(alpha==value3, list(value3=ALPHA[3])))
+    legend("bottomright", lwd = 3, col = line_colors, legend = lengend_str)
+  }
+  
+  plot.new()
+  plot.window(c(0,10), c(0,10))
+  text(5, 0.5, substitute("Power by different " * sigma), cex = 2)
+}
+
+plot_power(result)
+```
+
+### Discussion
+**(A)** How do $\alpha$, $\beta_1$, and $\sigma$ affect power? 
+
+According to the plots above, its obvious $\alpha$, $\beta_1$, and $\sigma$ affect power significantly. Specifically, 
+
+- When $\alpha$ **increase**, power also **increase**. Since $\alpha$ is used to measure significance of regression test, larger $\alpha$ means we would reject more $H_0$, thus give us larger power.
+- When $\beta_1$ **increase**, power also **increase**. Essentially, power is the probability that a signal of a particular strength will be detected. $\beta_1$ is considered as "signal" and larger signal is more easier to be detected. When $\beta_1$ is big enough (3 in our study), the power will converge to 1.
+- When $\sigma$ **increase**, power **decrease**. This also makes sense as $\sigma$ is considered as "noise", strong "noise" will bury  "signal" and thus make "signal" harder to be detected.  
+
+Let's decrease the $\beta_1$ range for better illustration.
+```{r fig.width = 12, fig.height = 12}
+BETA_1  = c(0, 0.1, 0.2, 0.3, 1)
+
+plot_power(calc_power())
+```
+
+**(B)** Are 1000 simulations sufficient?
+
+Yes. Although more simulations usually give us less estimation error, we already see very stable and obvious trend from the output with 1000 simulations. Increase simulation times won't give us much benefit from this study. 
+
+In another hand, reduce the simulation would make our conclusion not that obvious. For example, let's reduce the simulation to 100 and redraw the results.
+
+```{r fig.width = 12, fig.height = 12}
+NUM_SIMS   = 100
+
+plot_power(calc_power())
+```
+
+According to the plots, we can find some bumps (especially when $\sigma$ is large and $\beta_1$ is small) which make our findings not that obvious.
