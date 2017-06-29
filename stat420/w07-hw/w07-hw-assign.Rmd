@@ -1,17 +1,12 @@
 ---
 title: "Week 7 - Homework"
-author: "STAT 420, Summer 2017, Dalpiaz"
-date: ''
+author: "STAT 420, Summer 2017, Xiaoming Ji"
+date: 'July 1st, 2017'
 output:
   html_document: 
     toc: yes
   pdf_document: default
 ---
-
-# Directions
-
-- Be sure to remove this section if you use this `.Rmd` file as a template.
-- You may leave the questions in your final document.
 
 ```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
 options(scipen = 1, digits = 4, width = 80)
