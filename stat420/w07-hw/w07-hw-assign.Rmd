@@ -42,6 +42,15 @@ We will attempt to model `CO2` using both `horse` and `type`. In practice, we wo
 
 Load the data, and check its structure using `str()`. Verify that `type` is a factor; if not, coerce it to be a factor.
 
+```{r, message=FALSE}
+library(readr)
+epa2015_data = read_csv("epa2015.csv")
+#str(epa2015_data)
+is.factor(epa2015_data$type)
+epa2015_data$type = as.factor(epa2015_data$type)
+is.factor(epa2015_data$type)
+```
+
 **(a)** Do the following:
 
 - Make a scatterplot of `CO2` versus `horse`. Use a different color point for each vehicle `type`. 
@@ -49,6 +58,29 @@ Load the data, and check its structure using `str()`. Verify that `type` is a fa
 - Add the fitted regression line to the scatterplot. Comment on how well this line models the data. 
 - Give an estimate for the average change in `CO2` for a one foot-pound per second increase in `horse` for a vehicle of type `car`. 
 - Give a 99% prediction interval using this model for the `CO2` of a Subaru Impreza Wagon, which is a vehicle with 148 horsepower and is considered type `Both`. (Interestingly, the dataset gives the wrong drivetrain for most Subarus in this dataset, as they are almost all listed as `F`, when they are in fact all-wheel drive.)
+
+**Solution**
+```{r}
+plot(CO2 ~ horse, data = epa2015_data, col = as.numeric(type), pch = as.numeric(type))
+legend("bottomright", levels(epa2015_data$type), col = c(1, 2, 3), pch = c(1, 2, 3))
+epa2015_sim = lm(CO2 ~ horse, data = epa2015_data)
+abline(epa2015_sim, lwd = 3, col = "grey")
+
+value = predict(epa2015_sim, interval = c("prediction"), level = 0.99, newdata = data.frame(horse = 148))
+```
+
+- Regarding how well the regression line fits the data, as a pattern, the "Both" and "Truck" vehicle fall somewhat above the line, while the "Car" fit the line OK. This means our model underestimates the CO2 emissions of "Truck" and "Both" vehicle.
+- The average change in CO2 for a one foot-pound per second increase in horse for a vehicle of type Car is: $`r coef(epa2015_sim)["horse"]`$
+- The 99% prediction interval using this model for the CO2 of a Subaru Impreza Wagon, which is a vehicle with 148 horsepower and is considered type Both is: $(`r value[2]`, `r value[3]`)$
+
+
+
+**Solution**
+```{r}
+
+```
+
+
 
 **(b)** Do the following:
 
