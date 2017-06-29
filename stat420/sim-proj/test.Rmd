@@ -105,7 +105,7 @@ par(mfrow = c(2,2))
 barnames = c("1", "2", "3","4", "5", "6","7", "8", "9" )
 for (i in 1:NUM_SIGMA){
   barplot(t(mean_train_rmse)[i,], names.arg = barnames,
-          xlab = "Formula",
+          xlab = "Model",
           ylab = "Average RMSE",
           col = "dodgerblue")
   
