@@ -46,9 +46,8 @@ Load the data, and check its structure using `str()`. Verify that `type` is a fa
 library(readr)
 epa2015_data = read_csv("epa2015.csv")
 #str(epa2015_data)
-is.factor(epa2015_data$type)
-epa2015_data$type = as.factor(epa2015_data$type)
-is.factor(epa2015_data$type)
+if (!is.factor(epa2015_data$type))
+  epa2015_data$type = as.factor(epa2015_data$type)
 ```
 
 **(a)** Do the following:
@@ -61,34 +60,53 @@ is.factor(epa2015_data$type)
 
 **Solution**
 ```{r}
+par(mar=c(2.5, 2.5, 1.5, 1.5))
 plot(CO2 ~ horse, data = epa2015_data, col = as.numeric(type), pch = as.numeric(type))
-legend("bottomright", levels(epa2015_data$type), col = c(1, 2, 3), pch = c(1, 2, 3))
+legend("bottomright", levels(epa2015_data$type), col = 1:nlevels(epa2015_data$type), 
+       pch = 1:nlevels(epa2015_data$type))
 epa2015_sim = lm(CO2 ~ horse, data = epa2015_data)
 abline(epa2015_sim, lwd = 3, col = "grey")
 
-value = predict(epa2015_sim, interval = c("prediction"), level = 0.99, newdata = data.frame(horse = 148))
+value = predict(epa2015_sim, interval = c("prediction"), level = 0.99, newdata = data.frame(horse = 148, type = "Both"))
 ```
 
-- Regarding how well the regression line fits the data, as a pattern, the "Both" and "Truck" vehicle fall somewhat above the line, while the "Car" fit the line OK. This means our model underestimates the CO2 emissions of "Truck" and "Both" vehicle.
-- The average change in CO2 for a one foot-pound per second increase in horse for a vehicle of type Car is: $`r coef(epa2015_sim)["horse"]`$
-- The 99% prediction interval using this model for the CO2 of a Subaru Impreza Wagon, which is a vehicle with 148 horsepower and is considered type Both is: $(`r value[2]`, `r value[3]`)$
-
-
-
-**Solution**
-```{r}
-
-```
-
-
+- Regarding how well the regression line fits the data, as a pattern, the `Both` and `Truck` vehicle fall somewhat above the line, while the `Car` fit the line OK. This means our model underestimates the `CO2` emissions of `Truck` and `Both` vehicle.
+- The average change in `CO2` for a one foot-pound per second increase in horse for a vehicle of type Car is: $`r coef(epa2015_sim)["horse"]`$
+- The 99% prediction interval using this model for the `CO2` of a Subaru Impreza Wagon, which is a vehicle with 148 horsepower and is considered type `Both` is: $(`r value[2]`, `r value[3]`)$
 
 **(b)** Do the following:
 
 - Make a scatterplot of `CO2` versus `horse`. Use a different color point for each vehicle `type`. 
 - Fit an additive multiple regression model with `CO2` as the response and `horse` and `type` as the predictors.  
 - Add the fitted regression "lines" to the scatterplot with the same colors as their respective points (one line for each vehicle type). Comment on how well this line models the data. 
-- Give an estimate for the average change in `CO2` for a one foot-pound per second increase in `horse` for a vehicle of type `car`. 
+- An estimate for the average change in `CO2` for a one foot-pound per second increase in `horse` for a vehicle of type `car`. 
 - Give a 99% prediction interval using this model for the `CO2` of a Subaru Impreza Wagon, which is a vehicle with 148 horsepower and is considered type `Both`. 
+
+**Solution**
+```{r}
+par(mar=c(2.5, 2.5, 1.5, 1.5))
+plot(CO2 ~ horse, data = epa2015_data, col = as.numeric(type), pch = as.numeric(type))
+legend("bottomright", levels(epa2015_data$type), col = 1: nlevels(epa2015_data$type),
+       pch = 1:nlevels(epa2015_data$type))
+epa2015_add = lm(CO2 ~ horse + type, data = epa2015_data)
+
+int_both    = coef(epa2015_add)[1]
+int_car     = coef(epa2015_add)[1] + coef(epa2015_add)["typeCar"]
+int_truck   = coef(epa2015_add)[1] + coef(epa2015_add)["typeTruck"]
+slope_both  = coef(epa2015_add)["horse"]
+slope_car   = coef(epa2015_add)["horse"]
+slope_truck = coef(epa2015_add)["horse"]
+
+abline(int_both, slope_both, col = 1, lty = 1, lwd = 2)
+abline(int_car, slope_car, col = 2, lty = 2, lwd = 2)
+abline(int_truck, slope_truck, col = 3, lty = 3, lwd = 2)
+
+value = predict(epa2015_add, interval = c("prediction"), level = 0.99, newdata = data.frame(horse = 148, type = "Both"))
+```
+
+- Regarding how well the regression lines fits the data, we notice that the points are no longer systematically incorrect. The black and green regression lines, for `Both` and `Truck` vehicle types are adjusted above the red, `Car` regression line to better fit the data.
+- An estimate for the average change in `CO2` for a one foot-pound per second increase in horse for a vehicle of type `Car` is: $`r slope_car`$
+- The 99% prediction interval using this model for the `CO2` of a Subaru Impreza Wagon, which is a vehicle with 148 horsepower and is considered type `Both` is: $(`r value[2]`, `r value[3]`)$
 
 **(c)** Do the following:
 
@@ -98,7 +116,40 @@ value = predict(epa2015_sim, interval = c("prediction"), level = 0.99, newdata =
 - Give an estimate for the average change in `CO2` for a one foot-pound per second increase in `horse` for a vehicle of type `car`. 
 - Give a 99% prediction interval using this model for the `CO2` of a Subaru Impreza Wagon, which is a vehicle with 148 horsepower and is considered type `Both`. 
 
+**Solution**
+```{r}
+#par(mar=c(2.5, 2.5, 1.5, 1.5))
+plot(CO2 ~ horse, data = epa2015_data, col = as.numeric(type), pch = as.numeric(type))
+legend("bottomright", levels(epa2015_data$type), col = 1: nlevels(epa2015_data$type),
+       pch = 1:nlevels(epa2015_data$type))
+epa2015_int = lm(CO2 ~ horse * type, data = epa2015_data)
+
+int_both    = coef(epa2015_int)[1]
+int_car     = coef(epa2015_int)[1] + coef(epa2015_int)["typeCar"]
+int_truck   = coef(epa2015_int)[1] + coef(epa2015_int)["typeTruck"]
+slope_both  = coef(epa2015_int)["horse"]
+slope_car   = coef(epa2015_int)["horse"] + coef(epa2015_int)["horse:typeCar"]
+slope_truck = coef(epa2015_int)["horse"] + coef(epa2015_int)["horse:typeTruck"]
+
+abline(int_both, slope_both, col = 1, lty = 1, lwd = 2)
+abline(int_car, slope_car, col = 2, lty = 2, lwd = 2)
+abline(int_truck, slope_truck, col = 3, lty = 3, lwd = 2)
+
+value = predict(epa2015_int, interval = c("prediction"), level = 0.99, newdata = data.frame(horse = 148, type = "Both"))
+```
+
+- Regarding how well the regression lines fits the data, we notice that the extra estimates on the slope for different type gives the best fit. Especially, for the green regression line, `Truck` type is adjusted noticeably with biggest slope. Meaning `Truck` type has the greatest average change on `CO2` emission than `Both` and `Car` types for a one foot-pound per second increase in horse.
+- An estimate for the average change in `CO2` for a one foot-pound per second increase in horse for a vehicle of type `Car` is: $`r slope_car`$
+- The 99% prediction interval using this model for the `CO2` of a Subaru Impreza Wagon, which is a vehicle with 148 horsepower and is considered type `Both` is: $(`r value[2]`, `r value[3]`)$
+
 **(d)** Based on the previous plots, you probably already have an opinion on the best model. Now use an ANOVA $F$-test to compare the additive and interaction models. Based on this test and a significance level of $\alpha = 0.01$, which model is preferred?
+
+**Solution**
+```{r}
+(result = anova(epa2015_add, epa2015_int))
+```
+
+Since the p-value for the $F$-test is `r format(result[2, "Pr(>F)"])` and less than $\alpha = 0.01$, we prefer **interaction model**.
 
 ## Exercise 2 (Hospital SUPPORT Data)
 
@@ -122,15 +173,70 @@ For this exercise, we will use `Charges`, `Pressure`, `Care`, and `Race` to mode
 
 **(a)** Load the data, and check its structure using `str()`. Verify that `Care` and `Race` are factors; if not, coerce them to be factors. What are the levels of `Care` and `Race`?
 
+**Solution**
+```{r, message=FALSE}
+hospital_data = read_csv("hospital.csv")
+#str(hospital_data)
+if (!is.factor(hospital_data$Care))
+  hospital_data$Care = as.factor(hospital_data$Care)
+
+if (!is.factor(hospital_data$Race))
+  hospital_data$Race = as.factor(hospital_data$Race)
+
+levels(hospital_data$Care)
+levels(hospital_data$Race)
+```
+
 **(b)** Fit an additive multiple regression model with `Days` as the response using `Charges`, `Pressure`, `Care`, and `Race` as predictors. What does `R` choose as the reference level for `Care` and `Race`?
+
+**Solution**
+```{r}
+hospital_add = lm(Days ~ Charges + Pressure + Care + Race, data = hospital_data)
+coef(hospital_add)
+```
+`R` choose `high` for `Care` and `non-white` for `Race` as reference level.
 
 **(c)** Fit a multiple regression model with `Days` as the response. Use the main effects of `Charges`, `Pressure`, `Care`, and `Race`, as well as the interaction of `Care` with each of the numeric predictors as predictors (that is, the interaction of `Care` with `Charges` and the interaction of `Care` with `Pressure`). Use a statistical test to compare this model to the additive model using a significance level of $\alpha = 0.01$. Which do you prefer?
 
+**Solution**
+```{r}
+hospital_care_int = lm(Days ~ Charges + Pressure + Care + Race + Charges:Care + 
+                         Pressure:Care, data = hospital_data)
+
+anova(hospital_add, hospital_care_int)[2, "Pr(>F)"]
+```
+
+Since the p-value of the test is less than 0.01, we prefer the **Care interactive model**.
+
 **(d)** Fit a multiple regression model with `Days` as the response. Use the predictors from the model in **(c)** as well as the interaction of `Race` with each of the numeric predictors (that is, the interaction of `Race` with `Charges` and the interaction of `Race` with `Pressure`). Use a statistical test to compare this model to the additive model using a significance level of $\alpha = 0.01$. Which do you prefer?
+
+**Solution**
+```{r}
+hospital_race_int = lm(Days ~ Charges + Pressure + Care + Race + Charges:Race + 
+                         Pressure:Race, data = hospital_data)
+
+anova(hospital_add, hospital_race_int)[2, "Pr(>F)"]
+```
+Since the p-value of the test is less than 0.01, we prefer the **Race interactive model**.
 
 **(e)** Using the model in **(d)**, give an estimate of the change in average `Days` for a one-unit increase in `Pressure` for a `"non-white"` patient that required a low level of care.
 
+**Solution**
+```{r}
+ (slope = coef(hospital_race_int)["Pressure"])
+```
+Note: `non-white` is the reference level of `Race` and `Care` has no slope difference on `Pressure`.
+
 **(f)** Find a model using the four predictors that we have been considering that is more flexible than the model in **(d)** and that is also statistically significant as compared to the model in **(d)** at a significance level of $\alpha = 0.01$.
+
+**Solution**
+```{r}
+hospital_care_race_int = lm(Days ~ Charges + Pressure + Care + Race + Charges:Care + 
+                              Pressure:Care + Charges:Race + Pressure:Race,
+                            data = hospital_data)
+(p_value = anova(hospital_race_int, hospital_care_race_int)[2, "Pr(>F)"])
+```
+The model use `Days` as the response. Use the main effects of `Charges`, `Pressure`, `Care`, and `Race`, as well as the interaction of both `Care` and `Race` with each of the numeric predictors as predictors. $F$-Test between this model and model in **(d)**, we got p-value as `r p_value`. Thus this model is statistically significant than model in **(d)** when $\alpha = 0.01$.
 
 ## Exercise 3 (Fish Data)
 
