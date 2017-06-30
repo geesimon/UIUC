@@ -58,9 +58,8 @@ if (!is.factor(epa2015_data$type))
 - Give an estimate for the average change in `CO2` for a one foot-pound per second increase in `horse` for a vehicle of type `car`. 
 - Give a 99% prediction interval using this model for the `CO2` of a Subaru Impreza Wagon, which is a vehicle with 148 horsepower and is considered type `Both`. (Interestingly, the dataset gives the wrong drivetrain for most Subarus in this dataset, as they are almost all listed as `F`, when they are in fact all-wheel drive.)
 
-**Solution**
-```{r}
-par(mar=c(2.5, 2.5, 1.5, 1.5))
+**Solution:**
+```{r fig.width = 9, fig.height = 9}
 plot(CO2 ~ horse, data = epa2015_data, col = as.numeric(type), pch = as.numeric(type))
 legend("bottomright", levels(epa2015_data$type), col = 1:nlevels(epa2015_data$type), 
        pch = 1:nlevels(epa2015_data$type))
@@ -82,9 +81,8 @@ value = predict(epa2015_sim, interval = c("prediction"), level = 0.99, newdata =
 - An estimate for the average change in `CO2` for a one foot-pound per second increase in `horse` for a vehicle of type `car`. 
 - Give a 99% prediction interval using this model for the `CO2` of a Subaru Impreza Wagon, which is a vehicle with 148 horsepower and is considered type `Both`. 
 
-**Solution**
-```{r}
-par(mar=c(2.5, 2.5, 1.5, 1.5))
+**Solution:**
+```{r fig.width = 9, fig.height = 9}
 plot(CO2 ~ horse, data = epa2015_data, col = as.numeric(type), pch = as.numeric(type))
 legend("bottomright", levels(epa2015_data$type), col = 1: nlevels(epa2015_data$type),
        pch = 1:nlevels(epa2015_data$type))
@@ -116,9 +114,8 @@ value = predict(epa2015_add, interval = c("prediction"), level = 0.99, newdata =
 - Give an estimate for the average change in `CO2` for a one foot-pound per second increase in `horse` for a vehicle of type `car`. 
 - Give a 99% prediction interval using this model for the `CO2` of a Subaru Impreza Wagon, which is a vehicle with 148 horsepower and is considered type `Both`. 
 
-**Solution**
-```{r}
-#par(mar=c(2.5, 2.5, 1.5, 1.5))
+**Solution:**
+```{r fig.width = 9, fig.height = 9}
 plot(CO2 ~ horse, data = epa2015_data, col = as.numeric(type), pch = as.numeric(type))
 legend("bottomright", levels(epa2015_data$type), col = 1: nlevels(epa2015_data$type),
        pch = 1:nlevels(epa2015_data$type))
@@ -144,7 +141,7 @@ value = predict(epa2015_int, interval = c("prediction"), level = 0.99, newdata =
 
 **(d)** Based on the previous plots, you probably already have an opinion on the best model. Now use an ANOVA $F$-test to compare the additive and interaction models. Based on this test and a significance level of $\alpha = 0.01$, which model is preferred?
 
-**Solution**
+**Solution:**
 ```{r}
 (result = anova(epa2015_add, epa2015_int))
 ```
@@ -173,7 +170,7 @@ For this exercise, we will use `Charges`, `Pressure`, `Care`, and `Race` to mode
 
 **(a)** Load the data, and check its structure using `str()`. Verify that `Care` and `Race` are factors; if not, coerce them to be factors. What are the levels of `Care` and `Race`?
 
-**Solution**
+**Solution:**
 ```{r, message=FALSE}
 hospital_data = read_csv("hospital.csv")
 #str(hospital_data)
@@ -189,7 +186,7 @@ levels(hospital_data$Race)
 
 **(b)** Fit an additive multiple regression model with `Days` as the response using `Charges`, `Pressure`, `Care`, and `Race` as predictors. What does `R` choose as the reference level for `Care` and `Race`?
 
-**Solution**
+**Solution:**
 ```{r}
 hospital_add = lm(Days ~ Charges + Pressure + Care + Race, data = hospital_data)
 coef(hospital_add)
@@ -198,7 +195,7 @@ coef(hospital_add)
 
 **(c)** Fit a multiple regression model with `Days` as the response. Use the main effects of `Charges`, `Pressure`, `Care`, and `Race`, as well as the interaction of `Care` with each of the numeric predictors as predictors (that is, the interaction of `Care` with `Charges` and the interaction of `Care` with `Pressure`). Use a statistical test to compare this model to the additive model using a significance level of $\alpha = 0.01$. Which do you prefer?
 
-**Solution**
+**Solution:**
 ```{r}
 hospital_care_int = lm(Days ~ Charges + Pressure + Care + Race + Charges:Care + 
                          Pressure:Care, data = hospital_data)
@@ -210,7 +207,7 @@ Since the p-value of the test is less than 0.01, we prefer the **Care interactiv
 
 **(d)** Fit a multiple regression model with `Days` as the response. Use the predictors from the model in **(c)** as well as the interaction of `Race` with each of the numeric predictors (that is, the interaction of `Race` with `Charges` and the interaction of `Race` with `Pressure`). Use a statistical test to compare this model to the additive model using a significance level of $\alpha = 0.01$. Which do you prefer?
 
-**Solution**
+**Solution:**
 ```{r}
 hospital_race_int = lm(Days ~ Charges + Pressure + Care + Race + Charges:Race + 
                          Pressure:Race, data = hospital_data)
@@ -221,7 +218,7 @@ Since the p-value of the test is less than 0.01, we prefer the **Race interactiv
 
 **(e)** Using the model in **(d)**, give an estimate of the change in average `Days` for a one-unit increase in `Pressure` for a `"non-white"` patient that required a low level of care.
 
-**Solution**
+**Solution:**
 ```{r}
  (slope = coef(hospital_race_int)["Pressure"])
 ```
@@ -229,7 +226,7 @@ Note: `non-white` is the reference level of `Race` and `Care` has no slope diffe
 
 **(f)** Find a model using the four predictors that we have been considering that is more flexible than the model in **(d)** and that is also statistically significant as compared to the model in **(d)** at a significance level of $\alpha = 0.01$.
 
-**Solution**
+**Solution:**
 ```{r}
 hospital_care_race_int = lm(Days ~ Charges + Pressure + Care + Race + Charges:Care + 
                               Pressure:Care + Charges:Race + Pressure:Race,
@@ -275,8 +272,10 @@ where
 
 **(a)** Fit the model above. Also consider fitting a smaller model in `R`.
 
-```{r, eval = FALSE}
-fish_smaller = lm(Weight ~ Length1 + HeightPct * WidthPct, data = fish)
+```{r, message=FALSE}
+fish_data = read_csv("fish.csv")
+
+fish_smaller = lm(Weight ~ Length1 + HeightPct * WidthPct, data = fish_data)
 ```
 
 Use a statistical test to compare this model with the previous. Report the following:
@@ -287,9 +286,59 @@ Use a statistical test to compare this model with the previous. Report the follo
 - A statistical decision using a significance level of $\alpha = 0.05$
 - Which model you prefer
 
+**Solution:**
+```{r}
+fish_int = lm(Weight ~ Length1 * HeightPct * WidthPct, data = fish_data)
+
+result = anova(fish_smaller, fish_int)
+```
+- The null hypotheses
+$$
+H_0: \beta_4 = \beta_5 = \beta_7 = 0
+$$
+which gives us the Null Model
+$$
+Y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_3 + \beta_6 x_2 x_3 + \epsilon
+$$
+- Alternative hypotheses
+$$
+H_1: \text{At least one of } \beta_4, \beta_5, \beta_7 \neq 0
+$$
+- The value of the test statistic: `r result[2, "F"]`
+- The p-value of the test: `r format(result[2, "Pr(>F)"])`
+- With this extremely low p-value, we would reject the null hypotheses at significance level of $\alpha = 0.05$
+- We prefer the larger model
+
 **(c)** Give an expression based on the model in the exercise description for the true change in average weight for a 1 cm increase in `Length1` for a fish with a `HeightPct` of 25 and a `WidthPct` of 15. Your answer should be a linear function of the $\beta$s.
 
+**Solution:**
+
+We rewrite the model as
+$$
+Y = \beta_0 + (\beta_1 + \beta_4 x_2 + \beta_5 x_3 + \beta_7 x_2 x_3) x_1 + \beta_2 x_2 + \beta_3 x_3 + \beta_6 x_2 x_3 + \epsilon
+$$
+Given the conditions, we have 
+$$
+Y_{change} = \beta_1 + \beta_4 * 25 + \beta_5 * 15 + \beta_7 * 25 * 15
+$$
+Thus,
+$$
+Y_{change} = \beta_1 + 25\beta_4 + 15\beta_5 + 375\beta_7
+$$
+
+
 **(d)** Give an expression based on the smaller model in the exercise description for the true change in average weight for a 1 cm increase in `Length1` for a fish with a `HeightPct` of 25 and a `WidthPct` of 15. Your answer should be a linear function of the $\beta$s.
+
+**Solution:**
+
+The smaller model is 
+$$
+Y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_3 + \beta_6 x_2 x_3 + \epsilon
+$$
+Since `Length1`$(x_1)$ doesn't have interaction with other predictors in this model, we have
+$$
+Y_{change} = \beta_1
+$$
 
 ## Exercise 4 ($t$-test Is a Linear Model)
 
