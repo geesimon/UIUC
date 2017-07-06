@@ -1,6 +1,6 @@
 ---
 title: "Week 8 - Homework"
-author: "STAT 420, Summer 2017, Dalpiaz"
+author: "STAT 420, Summer 2017, Xiaoming Ji"
 date: ''
 output:
   html_document: 
@@ -8,10 +8,6 @@ output:
   pdf_document: default
 ---
 
-# Directions
-
-- Be sure to remove this section if you use this `.Rmd` file as a template.
-- You may leave the questions in your final document.
 
 ```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
 options(scipen = 1, digits = 4, width = 80)
@@ -36,6 +32,12 @@ The function should output:
 - Two plots, side-by-side, when `plotit` is `TRUE`:
     - A fitted versus residuals plot that adds a horizontal line at $y = 0$, and labels the $x$-axis "Fitted" and the $y$-axis "Residuals". The points and line should be colored according to the input arguments. Give the plot a title. 
     - A Normal Q-Q plot of the residuals that adds the appropriate line using `qqline()`. The points and line should be colored according to the input arguments. Be sure the plot has a title. 
+
+```{r}
+diagnostics = function(model, pcol, lcol, alpha, plotit, testit) {
+  
+}
+```
 
 **(b)** Run the following code.
 
