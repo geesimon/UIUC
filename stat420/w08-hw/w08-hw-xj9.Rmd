@@ -34,14 +34,27 @@ The function should output:
     - A Normal Q-Q plot of the residuals that adds the appropriate line using `qqline()`. The points and line should be colored according to the input arguments. Be sure the plot has a title. 
 
 ```{r}
-diagnostics = function(model, pcol, lcol, alpha, plotit, testit) {
-  
+diagnostics = function(model, pcol = "black", lcol = "white", alpha = 0.05, plotit = TRUE, testit = TRUE) {
+  if(plotit) {
+    par(mfrow = c(1, 2))
+    
+    plot(fitted(model), resid(model), col = pcol, pch = 20,
+         xlab = "Fitted", ylab = "Residuals", main = "Fitted vs Residuals Plot")
+    abline(h = 0, col = lcol, lwd = 2)
+    
+    qqnorm(resid(model), main = "Normal Q-Q Plot", col = pcol)
+    qqline(resid(model), col = lcol, lwd = 2)
+  }
+  if(testit) {
+    p = shapiro.test(resid(model))[["p.value"]]
+    list(p_val = p, decision = ifelse(p < alpha, "Reject", "Fail to Reject"))    
+  }
 }
 ```
 
 **(b)** Run the following code.
 
-```{r, eval = FALSE}
+```{r}
 set.seed(42)
 data1 = data.frame(x = runif(n = 20, min = 0, max = 10),
                    y = rep(x = 0, times = 20))
@@ -77,23 +90,78 @@ library(faraway)
 
 **(a)** Fit an additive multiple regression model with `Fertility` as the response and the remaining variables in the `swiss` dataset as predictors. Report the $R^2$ for this model.
 
+**Solution**
+```{r}
+swiss_add = lm(Fertility ~ ., data = swiss)
+sum(resid(swiss_add)^2)
+```
+
+
 **(b)** Check the constant variance assumption for this model. Do you feel it has been violated? Justify your answer.
+
+**Solution**
+```{r, message=FALSE}
+library(lmtest)
+bptest(swiss_add)["p.value"]
+```
+The p-value of Breusch-Pagan test **Failed to reject** the Homoscedasticity hypothesis at $\alpha = 0.05$. Therefore, the constant variance assumption is **not violated**.
 
 **(c)** Check the normality assumption for this model. Do you feel it has been violated? Justify your answer.
 
+**Solution**
+```{r}
+diagnostics(swiss_add, pcol = "darkorange", lcol = "dodgerblue")
+```
+
+According to the plot and the p-value of Shapiro-Wilk Test, we **Failed to reject** the null hypothesis that the errors follows a normal distribution at $\alpha = 0.05$. Therefore, the normality assumption is **not violated**.
+
 **(d)** Check for any high leverage observations. Report any observations you determine to have high leverage.
+
+**Solution**
+```{r}
+hatvalues(swiss_add)[hatvalues(swiss_add) > 2 * mean(hatvalues(swiss_add))]
+```
+
 
 **(e)** Check for any influential observations. Report any observations you determine to be influential.
 
+**Solution**
+```{r}
+cd = cooks.distance(swiss_add)
+cd[cd > 4 / length(cd)]
+```
+
 **(f)** Refit the additive multiple regression model without any points you identified as influential. Compare the coefficients of this fitted model to the previously fitted model.
 
+**Solution**
+```{r}
+swiss_add_fix = lm(Fertility ~ ., data = swiss, subset = cd <= 4 / length(cd))
+coef(swiss_add_fix)
+coef(swiss_add)
+```
+We see after removal of the influential points, the coefficients are changed significantly.
+
 **(g)** Create a data frame that stores the observations that were "removed" because they were influential. Use the two models you have fit to make predictions with these observations. Comment on the difference between these two sets of predictions.
+
+**Solution**
+```{r}
+swiss_fix = swiss[cd > 4 / length(cd),]
+swiss_fix[, "Fertility"]
+(swiss_add_response     = predict(swiss_add, newdata = swiss_fix))
+(swiss_add_fix_response = predict(swiss_add_fix, newdata = swiss_fix))
+
+sqrt(mean((swiss_fix$Fertility - swiss_add_response) ^ 2))
+sqrt(mean((swiss_fix$Fertility - swiss_add_fix_response) ^ 2))
+
+```
+
+The RMSEs of these two models show that the original model has better prediction. It is understandable because the original model take these removed points into account when calculate the coefficients.
 
 ## Exercise 3 (Why Bother?)
 
 **Why** do we care about violations of assumptions? One key reason is that the distributions of the parameters that we have used are all reliant on these assumptions. When the assumptions are violated, the distributional results are not correct, so our tests are garbage. **Garbage In, Garbage Out!**
 
-Consider the following setup that we will use for the remainder of the exercise. We choose a sample size of 50.
+Consider the following setup that we will use for the remainder of the exercise. We choose a sample size of 100.
 
 ```{r}
 n = 100
@@ -129,7 +197,7 @@ Then, we simulate `y_2` in a manner that **does** violate assumptions, which we 
 
 ```{r}
 set.seed(42)
-y_2 = 5 + 0 * x_1 + 1 * x_2  + rnorm(n = n, mean = 0, sd = abs(x_2))
+y_2 = 5 + 0 * x_1 + 1 * x_2  + rnorm(n = n, mean = 0, sd = abs(x_1))
 fit_2 = lm(y_2 ~ x_1 + x_2)
 qqnorm(resid(fit_2), col = "dodgerblue")
 qqline(resid(fit_2), col = "darkorange", lwd = 2)
@@ -142,7 +210,7 @@ shapiro.test(resid(fit_2))
 num_sims = 2500
 p_val_1 = rep(0, num_sims)
 p_val_2 = rep(0, num_sims)
-birthday = 19081014
+birthday = 19720816
 set.seed(birthday)
 ```
 
@@ -154,7 +222,35 @@ Repeat the above process of generating `y_1` and `y_2` as defined above, and fit
 
 using both models, in the appropriate variables defined above. (You do not need to use a data frame as we have in the past. Although, feel free to modify the code to instead use a data frame.)
 
+**Solution**
+```{r}
+p_val_1 = rep(0, num_sims)
+p_val_2 = rep(0, num_sims)
+
+for (i in 1:num_sims) {
+  y_1 = 5 + 0 * x_1 + 1 * x_2 + rnorm(n = n, mean = 0, sd = 1)
+  y_2 = 5 + 0 * x_1 + 1 * x_2  + rnorm(n = n, mean = 0, sd = abs(x_1))
+  p_val_1[i] = summary(lm(y_1 ~ x_1 + x_2))$coefficient["x_1", "Pr(>|t|)"] 
+  p_val_2[i] = summary(lm(y_2 ~ x_1 + x_2))$coefficient["x_1", "Pr(>|t|)"] 
+}
+
+```
+
 **(b)** What proportion of the `p_val_1` values are less than 0.01? Less than 0.05? Less than 0.10? What proportion of the `p_val_2` values are less than 0.01? Less than 0.05? Less than 0.10? Arrange your results in a table. Briefly explain these results.
+
+**Solution**
+```{r}
+library("knitr")
+eval_1 = c(sum(p_val_1 < 0.01) / length(p_val_1), 
+           sum(p_val_1 < 0.05) / length(p_val_1),
+           sum(p_val_1 < 0.1) / length(p_val_1))
+eval_2 = c(sum(p_val_2 < 0.01) / length(p_val_2), 
+           sum(p_val_2 < 0.05) / length(p_val_2),
+           sum(p_val_2 < 0.1) / length(p_val_2))
+table_data = data.frame()
+kable(data.frame(eval_1, eval_2), col.names = c("sd = 1", "sd = abs(x_1)"),
+      caption = "Normal vs NonNormal")
+```
 
 ## Exercise 4 (TV Is Healthy?)
 
