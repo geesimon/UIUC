@@ -304,7 +304,7 @@ qqline(resid(fit_1), col = &quot;darkorange&quot;, lwd = 2)</code></pre>
 ## 
 ## data:  resid(fit_1)
 ## W = 0.98, p-value = 0.2</code></pre>
-<p>Then, we simulate <code>y_2</code> in a manner that <strong>does</strong> violate assumptions, which we again verify. In this case <span class="math inline">\(\epsilon \sim N(0, \sigma = |x_2|).\)</span></p>
+<p>Then, we simulate <code>y_2</code> in a manner that <strong>does</strong> violate assumptions, which we again verify. In this case <span class="math inline">\(\epsilon \sim N(0, \sigma = |x_1|).\)</span></p>
 <pre class="r"><code>set.seed(42)
 y_2 = 5 + 0 * x_1 + 1 * x_2  + rnorm(n = n, mean = 0, sd = abs(x_1))
 fit_2 = lm(y_2 ~ x_1 + x_2)
@@ -329,10 +329,7 @@ set.seed(birthday)</code></pre>
 \]</span></p>
 <p>using both models, in the appropriate variables defined above. (You do not need to use a data frame as we have in the past. Although, feel free to modify the code to instead use a data frame.)</p>
 <p><strong>Solution</strong></p>
-<pre class="r"><code>p_val_1 = rep(0, num_sims)
-p_val_2 = rep(0, num_sims)
-
-for (i in 1:num_sims) {
+<pre class="r"><code>for (i in 1:num_sims) {
   y_1 = 5 + 0 * x_1 + 1 * x_2 + rnorm(n = n, mean = 0, sd = 1)
   y_2 = 5 + 0 * x_1 + 1 * x_2  + rnorm(n = n, mean = 0, sd = abs(x_1))
   p_val_1[i] = summary(lm(y_1 ~ x_1 + x_2))$coefficient[&quot;x_1&quot;, &quot;Pr(&gt;|t|)&quot;] 
@@ -348,14 +345,14 @@ eval_2 = c(sum(p_val_2 &lt; 0.01) / length(p_val_2),
            sum(p_val_2 &lt; 0.05) / length(p_val_2),
            sum(p_val_2 &lt; 0.1) / length(p_val_2))
 table_data = data.frame()
-kable(data.frame(eval_1, eval_2), col.names = c(&quot;sd = 1&quot;, &quot;sd = abs(x_1)&quot;),
+kable(data.frame(eval_1, eval_2), col.names = c(&quot;p_value(sd = 1)&quot;, &quot;p_value(sd = abs(x_1))&quot;),
       caption = &quot;Normal vs NonNormal&quot;)</code></pre>
 <table>
 <caption>Normal vs NonNormal</caption>
 <thead>
 <tr class="header">
-<th align="right">sd = 1</th>
-<th align="right">sd = abs(x_1)</th>
+<th align="right">p_value(sd = 1)</th>
+<th align="right">p_value(sd = abs(x_1))</th>
 </tr>
 </thead>
 <tbody>
@@ -373,6 +370,7 @@ kable(data.frame(eval_1, eval_2), col.names = c(&quot;sd = 1&quot;, &quot;sd = a
 </tr>
 </tbody>
 </table>
+<p>We see the model with <span class="math inline">\(\epsilon \sim N(0, \sigma = |x_1|)\)</span> has larger proportion to reject the null hypothesis (<span class="math inline">\(\beta_1 = 0\)</span>) at any <span class="math inline">\(\alpha\)</span> (0.01, 0.05, 0.10) and thus is less accurate on prediting the <span class="math inline">\(\beta_1\)</span> value.</p>
 </div>
 <div id="exercise-4-tv-is-healthy" class="section level2">
 <h2>Exercise 4 (TV Is Healthy?)</h2>

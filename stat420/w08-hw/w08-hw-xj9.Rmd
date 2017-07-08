@@ -193,7 +193,7 @@ qqline(resid(fit_1), col = "darkorange", lwd = 2)
 shapiro.test(resid(fit_1))
 ```
 
-Then, we simulate `y_2` in a manner that **does** violate assumptions, which we again verify. In this case $\epsilon \sim N(0, \sigma = |x_2|).$
+Then, we simulate `y_2` in a manner that **does** violate assumptions, which we again verify. In this case $\epsilon \sim N(0, \sigma = |x_1|).$
 
 ```{r}
 set.seed(42)
@@ -224,9 +224,6 @@ using both models, in the appropriate variables defined above. (You do not need 
 
 **Solution**
 ```{r}
-p_val_1 = rep(0, num_sims)
-p_val_2 = rep(0, num_sims)
-
 for (i in 1:num_sims) {
   y_1 = 5 + 0 * x_1 + 1 * x_2 + rnorm(n = n, mean = 0, sd = 1)
   y_2 = 5 + 0 * x_1 + 1 * x_2  + rnorm(n = n, mean = 0, sd = abs(x_1))
@@ -248,9 +245,11 @@ eval_2 = c(sum(p_val_2 < 0.01) / length(p_val_2),
            sum(p_val_2 < 0.05) / length(p_val_2),
            sum(p_val_2 < 0.1) / length(p_val_2))
 table_data = data.frame()
-kable(data.frame(eval_1, eval_2), col.names = c("sd = 1", "sd = abs(x_1)"),
+kable(data.frame(eval_1, eval_2), col.names = c("p_value(sd = 1)", "p_value(sd = abs(x_1))"),
       caption = "Normal vs NonNormal")
 ```
+
+We see the model with $\epsilon \sim N(0, \sigma = |x_1|)$ has larger proportion to reject the null hypothesis ($\beta_1 = 0$) at any $\alpha$ (0.01, 0.05, 0.10) and thus is less accurate on prediting the $\beta_1$ value.
 
 ## Exercise 4 (TV Is Healthy?)
 
