@@ -261,7 +261,44 @@ library(faraway)
 
 **(a)** Fit a simple linear regression with `life` as the response and `tv` as the predictor. Plot a scatterplot and add the fitted line. Check the assumptions of this model.
 
+**Solution**
+```{r}
+tvdoc_1 = lm(life ~ tv, data = tvdoctor)
+plot(life ~ tv, data = tvdoctor, col = "grey", pch = 20,
+     main = "Degree 1")
+abline(tvdoc_1, col = "darkorange", lwd = 3)
+diagnostics(tvdoc_1, testit = FALSE, pcol = "darkorange", lcol = "dodgerblue")
+
+shapiro.test(resid(tvdoc_1))[["p.value"]]
+bptest(tvdoc_1)["p.value"]
+```
+
+- According to the Fitted versus Residuals Plot, at any fitted value, the mean of the residuals is not roughly 0. **Linearity assumption is invalid**.
+- Breusch-Pagan Test Failed to reject null hypothesis at $\alpha=0.05$. **Constant variance assumption is valid**.
+- Shapiro-Wilk Test Failed to reject null hypothesis at $\alpha=0.05$. **Normality assumption is valid**.
+
 **(b)** Fit higher order polynomial models of degree 3, 5, and 7. For each, plot a fitted versus residuals plot and comment on the constant variance assumption. Based on those plots, which of these three models do you think are acceptable? Use a statistical test(s) to compare the models you just chose. Based on the test, which is preferred? Check the normality assumption of this model. Identify any influential observations of this model.
+
+**Solution**
+```{r, fig.height=8, fig.width=8}
+plot_FR = function(model, title = "Fitted vs Residuals Plot", pcol = "black", 
+                   lcol = "red") {
+    plot(fitted(model), resid(model), col = pcol, pch = 20,
+         xlab = "Fitted", ylab = "Residuals", main = title)
+    abline(h = 0, col = lcol, lwd = 2)
+}
+
+tvdoc_3 = lm(life ~ poly(tv, degree = 3, raw = TRUE), data = tvdoctor)
+tvdoc_5 = lm(life ~ poly(tv, degree = 5, raw = TRUE), data = tvdoctor)
+tvdoc_7 = lm(life ~ poly(tv, degree = 7, raw = TRUE), data = tvdoctor)
+
+par(mfrow = c(2, 2))
+plot_FR(tvdoc_1, title = "Degree 1", pcol = "darkorange", lcol = "dodgerblue")
+plot_FR(tvdoc_3, title = "Degree 3", pcol = "darkorange", lcol = "dodgerblue")
+plot_FR(tvdoc_5, title = "Degree 5", pcol = "darkorange", lcol = "dodgerblue")
+plot_FR(tvdoc_7, title = "Degree 7", pcol = "darkorange", lcol = "dodgerblue")
+```
+
 
 ## Exercise 5 (Brains)
 
