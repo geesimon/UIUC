@@ -93,7 +93,7 @@ library(faraway)
 **Solution**
 ```{r}
 swiss_add = lm(Fertility ~ ., data = swiss)
-sum(resid(swiss_add)^2)
+summary(swiss_add)$r.squared
 ```
 
 
@@ -139,7 +139,7 @@ swiss_add_fix = lm(Fertility ~ ., data = swiss, subset = cd <= 4 / length(cd))
 coef(swiss_add_fix)
 coef(swiss_add)
 ```
-We see after removal of the influential points, the coefficients are changed significantly.
+We see after removal of the influential points, some coefficients are changed significantly.
 
 **(g)** Create a data frame that stores the observations that were "removed" because they were influential. Use the two models you have fit to make predictions with these observations. Comment on the difference between these two sets of predictions.
 
@@ -155,7 +155,7 @@ sqrt(mean((swiss_fix$Fertility - swiss_add_fix_response) ^ 2))
 
 ```
 
-The RMSEs of these two models show that the original model has better prediction. It is understandable because the original model take these removed points into account when calculate the coefficients.
+The RMSEs of these two models show that the original model has better prediction. It is understandable because the original model take these removed points into account when calculating the coefficients.
 
 ## Exercise 3 (Why Bother?)
 
@@ -249,7 +249,7 @@ kable(data.frame(eval_1, eval_2), col.names = c("p_value(sd = 1)", "p_value(sd =
       caption = "Normal vs NonNormal")
 ```
 
-We see the model with $\epsilon \sim N(0, \sigma = |x_1|)$ has larger proportion to reject the null hypothesis ($\beta_1 = 0$) at any $\alpha$ (0.01, 0.05, 0.10) and thus is less accurate on prediting the $\beta_1$ value.
+We see the model with $\epsilon \sim N(0, \sigma = |x_1|)$ has larger proportion to reject the null hypothesis ($\beta_1 = 0$) at any $\alpha$ (0.01, 0.05, 0.10) and thus is less accurate on prediting $\beta_1$ value.
 
 ## Exercise 4 (TV Is Healthy?)
 
@@ -273,7 +273,7 @@ shapiro.test(resid(tvdoc_1))[["p.value"]]
 bptest(tvdoc_1)["p.value"]
 ```
 
-- According to the Fitted versus Residuals Plot, at any fitted value, the mean of the residuals is not roughly 0. **Linearity assumption is invalid**.
+- According to the Fitted versus Residuals Plot, at some points of the fitted value, the mean of the residuals is not roughly 0. We would say the **Linearity assumption is invalid**.
 - Breusch-Pagan Test Failed to reject null hypothesis at $\alpha=0.05$. **Constant variance assumption is valid**.
 - Shapiro-Wilk Test Failed to reject null hypothesis at $\alpha=0.05$. **Normality assumption is valid**.
 
@@ -299,6 +299,24 @@ plot_FR(tvdoc_5, title = "Degree 5", pcol = "darkorange", lcol = "dodgerblue")
 plot_FR(tvdoc_7, title = "Degree 7", pcol = "darkorange", lcol = "dodgerblue")
 ```
 
+- According to the plots, at degree of 3, we still see a lot of points where for a fitted value, the spread of the residuals are not roughly the same, thus the **constant variance assumption is invalid**.
+- The model of degree 5 looks much better, so does the model of degree 7. Thus, we would say the constant variance assumption is somewhat valid. Models for degree 5 and 7 are acceptable.
+
+```{r}
+bptest(tvdoc_5)["p.value"]
+bptest(tvdoc_7)["p.value"]
+
+shapiro.test(resid(tvdoc_5))[["p.value"]]
+shapiro.test(resid(tvdoc_7))[["p.value"]]
+```
+
+Breusch-Pagan Test and Shapiro-Wilk Test show model of degree 7 has larger p-values. Which means this model has high probability to follow the constant variance and normality assumptions. Thus model of degree 7 is preferred. The normality assumption is also valid according to the Shapiro-Wilk Test.
+
+To identify influential observations of this model,
+```{r}
+cd = cooks.distance(tvdoc_7)
+cd[cd > 4 / length(cd)]
+```
 
 ## Exercise 5 (Brains)
 
@@ -312,6 +330,16 @@ library(MASS)
 
 **(b)** Fit a linear model with `brain` as the response and `body` as the predictor. Test for significance of regression. Do you think this is an appropriate model?
 
+**Solution**
+```{r}
+mammals_add = lm(brain ~ body, data = mammals)
+plot(brain ~ body, data = mammals, col = "grey", pch = 20,
+     main = "Brain and Body Weights for Land Mammals")
+abline(mammals_add, col = "darkorange", lwd = 3)
+summary(mammals_add)$coefficient
+```
+p-value of `body` for significance of regression test is extremely low but p-value of intercept is relatively large. If we look at the plot above, we can see most data is concentrated in the lower range of `body` and `brain`, therefore, this model is not appropriate.
+
 **(c)** Since the body weights do range over more than one order of magnitude and are strictly positive, we will use $\log(\text{body weight})$ as our *predictor*, with no further justification. (Recall, *the log rule*: if the values of a variable range over more than one order of magnitude and the variable is strictly positive, then replacing the variable by its logarithm is likely to be helpful.) Use the Box-Cox method to verify that $\log(\text{brain weight})$ is then a "recommended" transformation of the *response* variable. That is, verify that $\lambda = 0$ is among the "recommended" values of $\lambda$ when considering,
 
 \[
@@ -320,9 +348,41 @@ g_\lambda(y) = \beta_0 + \beta_1 \log(\text{body weight})+\epsilon
 
 Include the relevant plot in your results, using an appropriate zoom onto the relevant values.
 
+**Solution**
+```{r}
+mammals_add_log = lm(brain ~ log(body), data = mammals)
+boxcox(mammals_add_log, plotit = TRUE, lambda = seq(-0.1, 0.1, length = 20))
+```
+
+Using the Box-Cox method, we see that  $\lambda = 0$ is both in the interval, and extremely close to the maximum, which suggests a transformation of the form $\log(\text{brain weight})$ 
+
 **(d)** Fit the model justified in part **(c)**. That is, fit a model with $\log(\text{brain weight})$ as the response and $\log(\text{body weight})$ as a predictor. Plot $\log(\text{brain weight})$ versus $\log(\text{body weight})$ and add the regression line to the plot. Does a linear relationship seem to be appropriate here?
+
+**Solution**
+```{r}
+mammals_add_log_log = lm(log(brain) ~ log(body), data = mammals)
+plot(log(brain) ~ log(body), data = mammals, col = "grey", pch = 20,
+     main = "Log(Brain) and Log(Body) Weights for Land Mammals")
+abline(mammals_add_log_log, col = "darkorange", lwd = 3)
+summary(mammals_add_log_log)$coefficient
+```
+
+We see after log transformation, the regression line fit the data very well. The test for significance of regression also show better results. Therefore, this model is appropriate.
 
 **(e)** Use a Q-Q plot to check the normality of the errors for the model fit in part **(d)**.
 
+**Solution**
+```{r}
+qqnorm(resid(mammals_add_log_log), main = "Normal Q-Q Plot", col = "dodgerblue")
+qqline(resid(mammals_add_log_log), col = "darkorange", lwd = 2)
+```
+
+The normality assumption is valid according to the plot (although it does have some slightly fat tails).
+
 **(f)** Use the model from part **(d)** to predict the brain weight of a male Snorlax which has a body weight of 1014.1 pounds. (A Snorlax would be a mammal, right?) Construct a 90% prediction interval.
+
+**Solution**
+```{r}
+exp(predict(mammals_add_log_log, newdata = data.frame(body = 1014.1), interval = "prediction", level = 0.9))
+```
 
