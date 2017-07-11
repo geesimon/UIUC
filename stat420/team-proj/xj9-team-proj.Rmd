@@ -10,6 +10,7 @@ output:
 
 We load the data and fit it with a simple regression model with SalePrice as response and LotArea as predictor.
 
+
 ```{r, message=FALSE}
 library(readr)
 house_data = read_csv("HousePrices/train.csv")
