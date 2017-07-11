@@ -1,0 +1,20 @@
+---
+title: "Team Project by Xiaoming Ji"
+author: "STAT 420, Summer 2017, Xiaoming Ji"
+date: ''
+output:
+  html_document: 
+    toc: yes
+  pdf_document: default
+---
+
+```{r, message=FALSE}
+library(readr)
+house_data = read_csv("HousePrices/train.csv")
+house_model = lm(log(SalePrice) ~ log(LotArea), data = house_data)
+plot(log(SalePrice) ~ log(LotArea), data = house_data, col = "grey", pch = 20,
+     main = "Price by LotArea")
+abline(house_model, col = "darkorange", lwd = 3)
+summary(house_model)
+```
+
