@@ -155,8 +155,8 @@ plot(medv ~ log(lstat), data = Boston, col = "dodgerblue")
 ```
 We then use backward search with 2 degree of interaction to find the good model.
 ```{r}
-f = medv ~ (log(crim) + zn + indus + chas + nox + rm + age + dis + rad + ptratio +
-              black + log(lstat) + tax) ^ 2
+f = medv ~ (log(crim) + zn + indus + chas + nox + rm + age + dis + rad + 
+              ptratio + black + log(lstat) + tax) ^ 2
 
 model_full = lm(f, data = Boston)
 good_model = step(model_full, direction="backward", trace = 0)
@@ -180,7 +180,6 @@ For this exercise we will use the data stored in [`ballbearings.csv`](ballbearin
 - `Company` - denotes who manufactured the ball bearing (A, B, C)
 - `Type` - Company B makes several types of ball bearings (1, 2, 3); 0 otherwise
 
-
 **(a)** Find a model for `log(L50)` that does not reject the Shapiro-Wilk test at $\alpha = 0.01$ and obtains an **adjusted** $R^2$ higher than 0.52. You may not remove any observations, but may consider transformations. Your model should use fewer than 10 $\beta$ parameters.
 
 Store your model in a variable called `good_model_a`. Run the two given chunks to verify your model meets the requested criteria. If you cannot find a model that meets all criteria, partial credit will be given for meeting at least some of the criteria.
@@ -200,37 +199,51 @@ get_adj_r2 = function(model) {
 }
 ```
 
-```{r, eval = FALSE}
-get_sw_decision(good_model_a, alpha = 0.01)
-get_num_params(good_model_a)
-get_adj_r2(good_model_a)
-```
-
 **Solution**
-We first check the multicollinearity.
+
+Read data and fit a additive model with all predictors.
 ```{r, message=FALSE}
 library(readr)
 bearing_data = read_csv("ballbearings.csv")
-model = lm(log(L50) ~ . - Type - D, data = bearing_data)
-vif(model)
+vif(lm(log(L50) ~ ., data = bearing_data))
 ```
-
-
+We can see `Company` has largest VIF value, we remove this predictor. Since `P` has large range, we log transfer this predictor to fit the response better. In addition. We make the full model as,
 ```{r}
-
-bearing_data$Company = as.factor(bearing_data$Company)
-#bearing_data$Type = as.factor(bearing_data$Type)
-f = log(L50) ~ (log(P) + Z + D + Company) ^ 2
-
+f = log(L50) ~ (log(P) + Z + Type + D) ^ 2
+```
+We do exhaustive search and print the adjusted $R^2$ of each size.
+```{r}
+library(leaps)
 all_models = summary(regsubsets(f, data = bearing_data))
+all_models$adjr2 > 0.52
+```
+Start from size of 4, we have model with adjusted $R^2$ higher than 0.52.
+
+We fit a model with the selected model.
+```{r}
+all_models$which[4,]
+good_model_a = lm(log(L50) ~ Z + D + log(P):Z + log(P):D, data = bearing_data)
+```
+Let's run the tests.
+```{r}
+get_sw_decision(good_model_a, alpha = 0.01)
+get_num_params(good_model_a)
+get_adj_r2(good_model_a)
 ```
 
 **(b)** Find a model for `log(L50)` that does not reject the Shapiro-Wilk test at $\alpha = 0.01$ and obtains an **adjusted** $R^2$ higher than 0.60. You may not remove any observations, but may consider transformations. Your model should use fewer than 20 $\beta$ parameters.
 
 Store your model in a variable called `good_model_b`. Run the given chunk to verify your model meets the requested criteria. If you cannot find a model that meets all criteria, partial credit will be given for meeting at least some of the criteria.
 
+**Solution**
+```{r}
+all_models$adjr2 > 0.6
+all_models$which[5,]
+good_model_b = lm(log(L50) ~ Z + Type + D + log(P):Z + log(P):D, 
+                  data = bearing_data)
+```
 
-```{r, eval = FALSE}
+```{r}
 get_sw_decision(good_model_b, alpha = 0.01)
 get_num_params(good_model_b)
 get_adj_r2(good_model_b)
