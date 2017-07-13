@@ -1,17 +1,12 @@
 ---
 title: "Week 9 - Homework"
-author: "STAT 420, Summer 2017, Dalpiaz"
+author: "STAT 420, Summer 2017, Xiaoming Ji"
 date: ''
 output:
   html_document: 
     toc: yes
   pdf_document: default
 ---
-
-# Directions
-
-- Be sure to remove this section if you use this `.Rmd` file as a template.
-- You may leave the questions in your final document.
 
 ```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
 options(scipen = 1, digits = 4, width = 80)
@@ -21,20 +16,63 @@ options(scipen = 1, digits = 4, width = 80)
 
 The built-in dataset `longley` contains macroeconomic data for predicting employment. We will attempt to model the `Employed` variable.
 
-```{r, eval = FALSE}
-View(longley)
-?longley
+```{r, include=FALSE}
+library(faraway)
+library(lmtest)
 ```
 
 **(a)** What is the largest correlation between any pair of predictors in the dataset?
 
+**Solution**
+```{r}
+(c = cor(longley[, -7]))
+```
+We can find the largest correlation is between `GNP` and `Year` with value `r max(c[c != 1])`.
+
 **(b)** Fit a model with `Employed` as the response and the remaining variables as predictors. Calculate and report the variance inflation factor (VIF) for each of the predictors. Which variable has the largest VIF? Do any of the VIFs suggest multicollinearity?
+
+**Solution**
+```{r}
+longley_model = lm(Employed ~ ., data = longley)
+(v = vif(longley_model))
+v[which.max(v)]
+v[v > 5]
+```
+- `GNP` has the largest VIF.
+- `GNP.deflator`, `GNP`, `Unemployed`,`Population` and `Year` has VIF larger than 5 and are thus considered have multicollinearity problem. 
 
 **(c)** What proportion of the observed variation in `Population` is explained by a linear relationship with the other predictors?
 
+**Solution**
+```{r}
+population_model = lm(Population ~ . - Employed, data = longley)
+summary(population_model)$r.squared
+```
+
 **(d)** Calculate the partial correlation coefficient for `Population` and `Employed` **with the effects of the other predictors removed**.
 
+**Solution**
+```{r}
+cor(resid(longley_model), resid(population_model))
+```
+
 **(e)** Fit a new model with `Employed` as the response and the predictors from the model in **(b)** that were significant. (Use $\alpha = 0.05$.) Calculate and report the variance inflation factor for each of the predictors. Which variable has the largest VIF? Do any of the VIFs suggest multicollinearity?
+
+**Solution**
+
+Let's find the predictors with p-value < $\alpha$.
+```{r}
+summary(longley_model)$coefficient[, "Pr(>|t|)"] < 0.05
+```
+We fit these predictors to a new model.
+```{r}
+longley_e = lm(Employed ~ Unemployed + Armed.Forces + Year, data = longley)
+(v = vif(longley_e))
+v[max(v)]
+v > 5
+```
+- `Year` has the largest VIF
+- We don't find any predictors has VIF larger than 5 and none of VIFs suggest multicollinearity.
 
 **(f)** Use an $F$-test to compare the models in parts **(b)** and **(e)**. Report the following:
 
@@ -45,9 +83,20 @@ View(longley)
 - A decision
 - Which model you prefer, **(b)** or **(e)**
 
+**Solution**
+```{r}
+(result = anova(longley_e, longley_model))
+```
+- Null hypothesis: $\beta$ parameters for `GNP.deflator`, `GNP` and `Population` are 0.
+- Test statistic: `r result[2, "F"]`.
+- The distribution of the test statistic under the null hypothesis: F distribution with `r result[2, "Df"]` degrees of freedom.
+- p-value: `r result[2, "Pr(>F)"]`.
+- With this large p-value, we **failed to reject** null hypothesis at $\alpha=0.05$.
+- We prefer the smaller model **(e)**.
+
 **(g)** Check the assumptions of the model chosen in part **(f)**. Do any assumptions appear to be violated?
 
-```{r, echo = FALSE}
+```{r, echo=FALSE}
 plot_fitted_resid = function(model, pointcol = "dodgerblue", linecol = "darkorange") {
   plot(fitted(model), resid(model), 
        col = pointcol, pch = 20, cex = 1.5,
@@ -59,7 +108,20 @@ plot_qq = function(model, pointcol = "dodgerblue", linecol = "darkorange") {
   qqnorm(resid(model), col = pointcol, pch = 20, cex = 1.5)
   qqline(resid(model), col = linecol, lwd = 2)
 }
+
+par(mfrow = c(1, 2))
+plot_fitted_resid(longley_e)
+plot_qq(longley_e)
 ```
+
+```{r}
+bptest(longley_e)
+shapiro.test(resid(longley_e))
+```
+
+- Linearity: invalid. As we can find many fitted values in the fitted-residuals plot that the mean of the residuals are not roughly 0.
+- Constant variance: valid. As Breusch-Pagan test show large p-value. 
+- Normality: valid. As Shapiro-Wilk test show large p-value.
 
 ## Exercise 2 (`Boston` Housing Data)
 
@@ -80,7 +142,30 @@ get_loocv_rmse = function(model) {
 }
 ```
 
-```{r, eval = FALSE}
+
+**Solution**
+
+We do a log transformation of predictors `crim` and `lstat` in order to fit `medv` better.
+```{r, echo=FALSE, fig.height=8, fig.width=8}
+library(MASS)
+par(mfrow = c(2, 2))
+plot(medv ~ crim, data = Boston, col = "dodgerblue")
+plot(medv ~ log(crim), data = Boston, col = "dodgerblue")
+plot(medv ~ lstat, data = Boston, col = "dodgerblue")
+plot(medv ~ log(lstat), data = Boston, col = "dodgerblue")
+```
+We then use backward search with 2 degree of interaction to find the good model.
+```{r}
+f = medv ~ (log(crim) + zn + indus + chas + nox + rm + age + dis + rad + ptratio +
+              black + log(lstat) + tax) ^ 2
+
+model_full = lm(f, data = Boston)
+good_model = step(model_full, direction="backward", trace = 0)
+coef(good_model)
+```
+Lastly, we do the required tests.
+```{r}
+bptest(good_model)[["p.value"]]
 get_bp_decision(good_model, alpha = 0.01)
 get_loocv_rmse(good_model)
 ```

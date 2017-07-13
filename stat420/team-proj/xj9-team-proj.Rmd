@@ -63,4 +63,13 @@ house_data_reg = with(house_data, data.frame(SalePrice, LotArea,
 corrplot(cor(house_data_reg), method="circle")
 ```
 
-The covariance test shows `OverallQual`, `TotalBsmtSF`, `YearBuilt`, `YearRemodAdd`, `ExterQual`, `0.61358`, `FullBath`, `Fireplaces`, `0.640409` has high relation with `SalePrice`.
+The covariance test shows `OverallQual`, `TotalBsmtSF`, `YearBuilt`, `YearRemodAdd`, `ExterQual`, `FullBath`, `Fireplaces` has high relation with `SalePrice`.
+
+```{r}
+library(faraway)
+price_model_reg = lm(SalePrice ~ OverallQual + TotalBsmtSF + YearBuilt + 
+                       YearRemodAdd + ExterQual + FullBath + Fireplaces,
+                     data = house_data_reg)
+vif(price_model_reg)
+```
+
