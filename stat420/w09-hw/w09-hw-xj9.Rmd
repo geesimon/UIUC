@@ -142,7 +142,6 @@ get_loocv_rmse = function(model) {
 }
 ```
 
-
 **Solution**
 
 We do a log transformation of predictors `crim` and `lstat` in order to fit `medv` better.
