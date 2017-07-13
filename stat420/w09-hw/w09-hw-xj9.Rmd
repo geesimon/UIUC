@@ -206,6 +206,25 @@ get_num_params(good_model_a)
 get_adj_r2(good_model_a)
 ```
 
+**Solution**
+We first check the multicollinearity.
+```{r, message=FALSE}
+library(readr)
+bearing_data = read_csv("ballbearings.csv")
+model = lm(log(L50) ~ . - Type - D, data = bearing_data)
+vif(model)
+```
+
+
+```{r}
+
+bearing_data$Company = as.factor(bearing_data$Company)
+#bearing_data$Type = as.factor(bearing_data$Type)
+f = log(L50) ~ (log(P) + Z + D + Company) ^ 2
+
+all_models = summary(regsubsets(f, data = bearing_data))
+```
+
 **(b)** Find a model for `log(L50)` that does not reject the Shapiro-Wilk test at $\alpha = 0.01$ and obtains an **adjusted** $R^2$ higher than 0.60. You may not remove any observations, but may consider transformations. Your model should use fewer than 20 $\beta$ parameters.
 
 Store your model in a variable called `good_model_b`. Run the given chunk to verify your model meets the requested criteria. If you cannot find a model that meets all criteria, partial credit will be given for meeting at least some of the criteria.
