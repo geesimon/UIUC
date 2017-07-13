@@ -217,7 +217,7 @@ library(leaps)
 all_models = summary(regsubsets(f, data = bearing_data))
 all_models$adjr2 > 0.52
 ```
-Start from size of 4, we have model with adjusted $R^2$ higher than 0.52.
+Start from size of 4, we can find model with adjusted $R^2$ higher than 0.52.
 
 We fit a model with the selected model.
 ```{r}

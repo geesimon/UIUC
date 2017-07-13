@@ -337,7 +337,7 @@ vif(lm(log(L50) ~ ., data = bearing_data))</code></pre>
 all_models = summary(regsubsets(f, data = bearing_data))
 all_models$adjr2 &gt; 0.52</code></pre>
 <pre><code>## [1] FALSE FALSE FALSE  TRUE  TRUE  TRUE  TRUE  TRUE</code></pre>
-<p>Start from size of 4, we have model with adjusted <span class="math inline">\(R^2\)</span> higher than 0.52.</p>
+<p>Start from size of 4, we can find model with adjusted <span class="math inline">\(R^2\)</span> higher than 0.52.</p>
 <p>We fit a model with the selected model.</p>
 <pre class="r"><code>all_models$which[4,]</code></pre>
 <pre><code>## (Intercept)      log(P)           Z        Type           D    log(P):Z 
