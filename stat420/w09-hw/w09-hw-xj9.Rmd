@@ -153,6 +153,7 @@ plot(medv ~ log(crim), data = Boston, col = "dodgerblue")
 plot(medv ~ lstat, data = Boston, col = "dodgerblue")
 plot(medv ~ log(lstat), data = Boston, col = "dodgerblue")
 ```
+
 We then use backward search with 2 degree of interaction to find the good model.
 ```{r}
 f = medv ~ (log(crim) + zn + indus + chas + nox + rm + age + dis + rad + 
@@ -201,13 +202,13 @@ get_adj_r2 = function(model) {
 
 **Solution**
 
-Read data and fit a additive model with all predictors.
+Read data and fit an additive model with all predictors.
 ```{r, message=FALSE}
 library(readr)
 bearing_data = read_csv("ballbearings.csv")
 vif(lm(log(L50) ~ ., data = bearing_data))
 ```
-We can see `Company` has largest VIF value, we remove this predictor. Since `P` has large range, we log transfer this predictor to fit the response better. In addition. We make the full model as,
+We can see `Company` has largest VIF value, we remove this predictor. Since `P` has large range, we log transfer this predictor to fit the response better. We make the full model as
 ```{r}
 f = log(L50) ~ (log(P) + Z + Type + D) ^ 2
 ```
@@ -215,11 +216,11 @@ We do exhaustive search and print the adjusted $R^2$ of each size.
 ```{r}
 library(leaps)
 all_models = summary(regsubsets(f, data = bearing_data))
-all_models$adjr2 > 0.52
+all_models$adjr2
 ```
 Start from size of 4, we can find model with adjusted $R^2$ higher than 0.52.
 
-We fit a model with the selected model.
+We fit a model with the model of size of 4.
 ```{r}
 all_models$which[4,]
 good_model_a = lm(log(L50) ~ Z + D + log(P):Z + log(P):D, data = bearing_data)
@@ -353,6 +354,38 @@ Note that in both cases, you could `sum()` the result to obtain the number of fa
 
 Calculate the rate of false positives and negatives for both AIC and BIC. Compare the rates between the two methods. Arrange your results in a well formatted table.
 
+**Solution**
+```{r}
+num_sims = 200
+not_sig_total = length(not_sig) * num_sims
+signif_total  = length(signif) * num_sims
+
+perform_sim = function(sigma = 1, sim_data) {
+  n = nrow(sim_data)
+  sim_data$y = with(sim_data, beta_0 + beta_2 * x_2 + beta_4 * x_4 + beta_6 * x_6 
+                    + beta_8 * x_8 + beta_10 * x_10 + rnorm(n, 0 , sigma))
+
+  fit = lm(y ~ ., data = sim_data)
+  
+  mod_back_aic = step(fit, direction="backward", trace = 0)
+  mod_back_bic = step(fit, direction="backward", trace = 0, k = log(n))
+  
+  #Calculate the rate of false negatives and positives 
+  c(sum(!(signif %in% names(coef(mod_back_aic)))) / length(signif), 
+    sum(!(signif %in% names(coef(mod_back_bic)))) / length(signif),
+    sum(names(coef(mod_back_aic)) %in% not_sig) / length(coef(mod_back_aic)),
+    sum(names(coef(mod_back_bic)) %in% not_sig) / length(coef(mod_back_bic)))
+}
+
+set.seed(19720816)
+results = replicate(n = num_sims, perform_sim(sigma = 3, sim_data = sim_data_1))
+```
+
+|      | False Positive | False Negative | 
+|------|----------------|----------------|
+| AIC  |`r mean(results[3,])`|`r mean(results[1,])`| 
+| BIC  |`r mean(results[4,])`|`r mean(results[2,])`| 
+
 **(b)** Set a seed equal to your birthday; then, using the given data for each `x` variable below in `sim_data_2`, simulate the response variable `y` 200 times. Each time,
 
 - Fit an additive model using each of the `x` variables.
@@ -382,3 +415,15 @@ sim_data_2 = data.frame(x_1, x_2, x_3, x_4, x_5, x_6, x_7, x_8, x_9, x_10,
 )
 ```
 
+**Solution**
+```{r}
+set.seed(19720816)
+results = replicate(n = num_sims, perform_sim(sigma = 3, sim_data = sim_data_2))
+```
+
+|      | False Positive | False Negative | 
+|------|----------------|----------------|
+| AIC  |`r mean(results[3,])`|`r mean(results[1,])`| 
+| BIC  |`r mean(results[4,])`|`r mean(results[2,])`| 
+
+We see both false positives and negatives are increased in **(b)**. Especially, the False Negative is creased significantly. The reason is the data of **(b)** has big multicollinearity problem. As we know, multicollinearity can cause high variance in parameter inference, and thus make the model selection less accurate.
