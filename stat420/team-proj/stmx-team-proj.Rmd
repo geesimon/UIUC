@@ -73,7 +73,7 @@ plot(SalePrice ~ log(LotArea), data = house_data, col = "grey", pch = 20,
 abline(price_model_log, col = "darkorange", lwd = 3)
 ```
 
-The regressin line does show some fit with the data.
+The regression line does show some fit with the data.
 
 We use the corrplot package in combination with the cor() function to plot the correlations between selected predictors.
 ```{r, echo=FALSE}
