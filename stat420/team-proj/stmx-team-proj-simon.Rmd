@@ -129,22 +129,21 @@ for (name in CategoricalNames) {
 ```
 
 - Remove predictor with too many NAs (> 10%)
-- Replace NA with mean value.
+- Replace categorical NA with 
+- Replace numeric NA with mean value
 
 ```{r}
-
 rm_index = c()
 for(i in 2:ncol(house_data)) {
   if(sum(is.na(house_data[[i]])) / nrow(house_data) > 0.1) {
     rm_index = c(rm_index, i)
   } else {
+      na = is.na(house_data[[i]])
+      
       if(is.factor(house_data[[i]])){
         
       } else {
-        print(sum(is.na(house_data[[i]])))
-        print(colnames(house_data)[i])
-        print(mean(house_data[[i]][!is.na(house_data[[i]])]))
-        house_data[[i]][is.na(house_data[[i]])] = mean(house_data[[i]][!is.na(house_data[[i]])])
+        house_data[[i]][na] = mean(house_data[[i]][!na])
       }
   }
 }
