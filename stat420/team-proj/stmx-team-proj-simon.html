@@ -176,7 +176,7 @@ house_data = read_csv(&quot;HousePrices/train.csv&quot;)
 head(house_data[,c(&quot;SalePrice&quot;, &quot;MSZoning&quot;, &quot;LotArea&quot;, &quot;OverallQual&quot;,
                    &quot;TotRmsAbvGrd&quot;, &quot;YearBuilt&quot;, &quot;BedroomAbvGr&quot;, &quot;BsmtFullBath&quot;,
                    &quot;GarageCars&quot;)])</code></pre>
-<pre><code>## # A tibble: 6 × 9
+<pre><code>## # A tibble: 6 x 9
 ##   SalePrice MSZoning LotArea OverallQual TotRmsAbvGrd YearBuilt
 ##       &lt;int&gt;    &lt;chr&gt;   &lt;int&gt;       &lt;int&gt;        &lt;int&gt;     &lt;int&gt;
 ## 1    208500       RL    8450           7            8      2003
@@ -197,7 +197,11 @@ head(house_data[,c(&quot;SalePrice&quot;, &quot;MSZoning&quot;, &quot;LotArea&qu
 <p>The test shows <code>OverallQual</code>, <code>TotalBsmtSF</code>, <code>YearBuilt</code>, <code>YearRemodAdd</code>, <code>ExterQual</code>, <code>FullBath</code>, <code>Fireplaces</code> has strong correlation with <code>SalePrice</code>.</p>
 <div id="data-preprocessing" class="section level2">
 <h2>Data Preprocessing</h2>
-<p>Change categorical predictor to factors.</p>
+<ul>
+<li>Convert categorical predictor to factor and make NA an extra value</li>
+<li>Remove predictor with too many NAs (&gt; 10%)</li>
+<li>Replace categorical NA with</li>
+</ul>
 <pre class="r"><code>CategoricalNames = c(&quot;MSSubClass&quot;, &quot;MSZoning&quot;, &quot;Street&quot;, &quot;Alley&quot;, &quot;LotShape&quot;,
             &quot;LandContour&quot;, &quot;Utilities&quot;, &quot;LotConfig&quot;, &quot;LandSlope&quot;, 
             &quot;Neighborhood&quot;, &quot;Condition1&quot;, &quot;Condition2&quot;, &quot;BldgType&quot;, 
@@ -216,101 +220,60 @@ head(house_data[,c(&quot;SalePrice&quot;, &quot;MSZoning&quot;, &quot;LotArea&qu
 
 NumericNames = colnames(house_data)[!colnames(house_data) %in% CategoricalNames]
 
-for (name in CategoricalNames) {
-  house_data[[name]] = as.factor(house_data[[name]])
-}</code></pre>
-<ul>
-<li>Remove predictor with too many NAs (&gt; 10%)</li>
-<li>Replace NA with mean value.</li>
-</ul>
-<pre class="r"><code>rm_index = c()
+rm_index = c()
 for(i in 2:ncol(house_data)) {
-  if(sum(is.na(house_data[[i]])) / nrow(house_data) &gt; 0.1) {
+  nas = is.na(house_data[[i]])
+  
+  #Find predictors with too many NAs (&gt; 10%)
+  if(sum(nas) / nrow(house_data) &gt; 0.1) {
     rm_index = c(rm_index, i)
   } else {
-      if(is.factor(house_data[[i]])){
-        
-      } else {
-        print(sum(is.na(house_data[[i]])))
+    if(colnames(house_data)[i] %in% CategoricalNames) { #Categorical predictor
+      #house_data[[i]][nas] = names(table(house_data[[i]])[which.max(table(house_data[[i]]))])
+      house_data[[i]] = factor(house_data[[i]], exclude = NULL)
+    } else{
+      if(sum(nas) &gt; 0) {
         print(colnames(house_data)[i])
-        print(mean(house_data[[i]][!is.na(house_data[[i]])]))
-        house_data[[i]][is.na(house_data[[i]])] = mean(house_data[[i]][!is.na(house_data[[i]])])
+        print(mean(house_data[[i]][!nas]))
       }
+      house_data[[i]][nas] = mean(house_data[[i]][!nas])
+    }
   }
 }</code></pre>
-<pre><code>## [1] 0
-## [1] &quot;LotArea&quot;
-## [1] 10516.83
-## [1] 0
-## [1] &quot;YearBuilt&quot;
-## [1] 1971.268
-## [1] 0
-## [1] &quot;YearRemodAdd&quot;
-## [1] 1984.866
-## [1] 8
-## [1] &quot;MasVnrArea&quot;
+<pre><code>## [1] &quot;MasVnrArea&quot;
 ## [1] 103.6853
-## [1] 0
-## [1] &quot;BsmtFinSF1&quot;
-## [1] 443.6397
-## [1] 0
-## [1] &quot;BsmtFinSF2&quot;
-## [1] 46.54932
-## [1] 0
-## [1] &quot;BsmtUnfSF&quot;
-## [1] 567.2404
-## [1] 0
-## [1] &quot;TotalBsmtSF&quot;
-## [1] 1057.429
-## [1] 0
-## [1] &quot;1stFlrSF&quot;
-## [1] 1162.627
-## [1] 0
-## [1] &quot;2ndFlrSF&quot;
-## [1] 346.9925
-## [1] 0
-## [1] &quot;LowQualFinSF&quot;
-## [1] 5.844521
-## [1] 0
-## [1] &quot;GrLivArea&quot;
-## [1] 1515.464
-## [1] 81
 ## [1] &quot;GarageYrBlt&quot;
-## [1] 1978.506
-## [1] 0
-## [1] &quot;GarageArea&quot;
-## [1] 472.9801
-## [1] 0
-## [1] &quot;WoodDeckSF&quot;
-## [1] 94.24452
-## [1] 0
-## [1] &quot;OpenPorchSF&quot;
-## [1] 46.66027
-## [1] 0
-## [1] &quot;EnclosedPorch&quot;
-## [1] 21.95411
-## [1] 0
-## [1] &quot;3SsnPorch&quot;
-## [1] 3.409589
-## [1] 0
-## [1] &quot;ScreenPorch&quot;
-## [1] 15.06096
-## [1] 0
-## [1] &quot;PoolArea&quot;
-## [1] 2.758904
-## [1] 0
-## [1] &quot;MiscVal&quot;
-## [1] 43.48904
-## [1] 0
-## [1] &quot;MoSold&quot;
-## [1] 6.321918
-## [1] 0
-## [1] &quot;YrSold&quot;
-## [1] 2007.816
-## [1] 0
-## [1] &quot;SalePrice&quot;
-## [1] 180921.2</code></pre>
+## [1] 1978.506</code></pre>
 <pre class="r"><code>house_data =  house_data[, -rm_index]</code></pre>
+<pre class="r"><code>library(lmtest)
+get_bp_decision = function(model, alpha) {
+  decide = unname(bptest(model)$p.value &lt; alpha)
+  ifelse(decide, &quot;Reject&quot;, &quot;Fail to Reject&quot;)
+}
+
+get_sw_decision = function(model, alpha) {
+  decide = unname(shapiro.test(resid(model))$p.value &lt; alpha)
+  ifelse(decide, &quot;Reject&quot;, &quot;Fail to Reject&quot;)
+}
+
+get_loocv_rmse = function(model) {
+  sqrt(mean((resid(model) / (1 - hatvalues(model))) ^ 2))
+}
+
+get_adj_r2 = function(model) {
+  summary(model)$adj.r.squared
+}</code></pre>
+<p>Try model and check assumption and LOOCV RMSE</p>
+<pre class="r"><code>full_model = lm(SalePrice ~ ., data = house_data)
+
+get_bp_decision(full_model, 0.05)</code></pre>
+<pre><code>## [1] &quot;Reject&quot;</code></pre>
+<pre class="r"><code>get_sw_decision(full_model, 0.05)</code></pre>
+<pre><code>## [1] &quot;Reject&quot;</code></pre>
+<pre class="r"><code>get_loocv_rmse(full_model)</code></pre>
+<pre><code>## [1] Inf</code></pre>
+<pre class="r"><code>get_adj_r2(full_model)</code></pre>
+<pre><code>## [1] 0.9247104</code></pre>
 </div>
 </div>
 

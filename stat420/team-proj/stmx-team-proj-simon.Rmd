@@ -103,7 +103,10 @@ The test shows `OverallQual`, `TotalBsmtSF`, `YearBuilt`, `YearRemodAdd`, `Exter
 
 ## Data Preprocessing 
 
-Change categorical predictor to factors.
+- Convert categorical predictor to factor and make NA an extra value
+- Remove predictor with too many NAs (> 10%)
+- Replace categorical NA with
+
 ```{r}
 CategoricalNames = c("MSSubClass", "MSZoning", "Street", "Alley", "LotShape",
             "LandContour", "Utilities", "LotConfig", "LandSlope", 
@@ -123,30 +126,58 @@ CategoricalNames = c("MSSubClass", "MSZoning", "Street", "Alley", "LotShape",
 
 NumericNames = colnames(house_data)[!colnames(house_data) %in% CategoricalNames]
 
-for (name in CategoricalNames) {
-  house_data[[name]] = as.factor(house_data[[name]])
-}
-```
-
-- Remove predictor with too many NAs (> 10%)
-- Replace categorical NA with 
-- Replace numeric NA with mean value
-
-```{r}
 rm_index = c()
 for(i in 2:ncol(house_data)) {
-  if(sum(is.na(house_data[[i]])) / nrow(house_data) > 0.1) {
+  nas = is.na(house_data[[i]])
+  
+  #Find predictors with too many NAs (> 10%)
+  if(sum(nas) / nrow(house_data) > 0.1) {
     rm_index = c(rm_index, i)
   } else {
-      na = is.na(house_data[[i]])
-      
-      if(is.factor(house_data[[i]])){
-        
-      } else {
-        house_data[[i]][na] = mean(house_data[[i]][!na])
+    if(colnames(house_data)[i] %in% CategoricalNames) { #Categorical predictor
+      #house_data[[i]][nas] = names(table(house_data[[i]])[which.max(table(house_data[[i]]))])
+      house_data[[i]] = factor(house_data[[i]], exclude = NULL)
+    } else{
+      if(sum(nas) > 0) {
+        print(colnames(house_data)[i])
+        print(mean(house_data[[i]][!nas]))
       }
+      house_data[[i]][nas] = mean(house_data[[i]][!nas])
+    }
   }
 }
 
 house_data =  house_data[, -rm_index]
 ```
+
+```{r, message=FALSE}
+library(lmtest)
+get_bp_decision = function(model, alpha) {
+  decide = unname(bptest(model)$p.value < alpha)
+  ifelse(decide, "Reject", "Fail to Reject")
+}
+
+get_sw_decision = function(model, alpha) {
+  decide = unname(shapiro.test(resid(model))$p.value < alpha)
+  ifelse(decide, "Reject", "Fail to Reject")
+}
+
+get_loocv_rmse = function(model) {
+  sqrt(mean((resid(model) / (1 - hatvalues(model))) ^ 2))
+}
+
+get_adj_r2 = function(model) {
+  summary(model)$adj.r.squared
+}
+```
+
+Try model and check assumption and LOOCV RMSE
+```{r}
+full_model = lm(SalePrice ~ ., data = house_data)
+
+get_bp_decision(full_model, 0.05)
+get_sw_decision(full_model, 0.05)
+get_loocv_rmse(full_model)
+get_adj_r2(full_model)
+```
+
