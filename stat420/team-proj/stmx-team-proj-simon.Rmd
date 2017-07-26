@@ -108,6 +108,10 @@ The test shows `OverallQual`, `TotalBsmtSF`, `YearBuilt`, `YearRemodAdd`, `Exter
 - Replace categorical NA with
 
 ```{r}
+#Combine FullBath and HalfBath
+house_data$Bath = house_data$FullBath + house_data$HalfBath * 0.5
+house_data = subset(house_data, select = -c(FullBath, HalfBath))
+
 CategoricalNames = c("MSSubClass", "MSZoning", "Street", "Alley", "LotShape",
             "LandContour", "Utilities", "LotConfig", "LandSlope", 
             "Neighborhood", "Condition1", "Condition2", "BldgType", 
@@ -116,11 +120,16 @@ CategoricalNames = c("MSSubClass", "MSZoning", "Street", "Alley", "LotShape",
             "ExterQual", "ExterCond", "Foundation", "BsmtQual", 
             "BsmtCond", "BsmtExposure", "BsmtFinType1", "BsmtFinType2", 
             "Heating", "HeatingQC", "CentralAir", "Electrical", 
-            "BsmtFullBath", "BsmtHalfBath", "FullBath","HalfBath", 
-            "BedroomAbvGr", "KitchenAbvGr",
-            "KitchenQual", "TotRmsAbvGrd","Functional", 
-            "Fireplaces","FireplaceQu", 
-            "GarageType","GarageFinish", "GarageCars","GarageQual", "GarageCond", 
+#           "BsmtFullBath", "BsmtHalfBath", 
+#           "FullBath","HalfBath", 
+#           "BedroomAbvGr", "KitchenAbvGr",
+            "KitchenQual", "Functional", 
+#           "TotRmsAbvGrd",
+#            "Fireplaces",
+            "FireplaceQu", 
+            "GarageType","GarageFinish", 
+#           "GarageCars",
+            "GarageQual", "GarageCond", 
             "PavedDrive", "PoolQC", "Fence", "MiscFeature", 
             "SaleType", "SaleCondition")
 
@@ -147,7 +156,7 @@ for(i in 2:ncol(house_data)) {
   }
 }
 
-house_data =  house_data[, -rm_index]
+house_data = subset(house_data, select = -rm_index)
 ```
 
 ```{r, message=FALSE}
@@ -182,6 +191,7 @@ get_adj_r2(full_model)
 ```
 
 ```{r}
+summary(m)$coefficient[summary(m)$coefficient[,"Pr(>|t|)"] < 0.1,]
 #mod_back_aic = step(full_model, direction = "backward")
 ```
 
