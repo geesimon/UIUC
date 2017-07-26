@@ -190,8 +190,6 @@ cor(house_data[, NumericNames])["SalePrice",]
 
 model = lm(SalePrice ~ (YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + TotalBsmtSF +  GrLivArea + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars  + WoodDeckSF + OpenPorchSF + Bath) ^ 3, data = house_data)
 
-
-
 get_bp_decision(model, 0.05)
 get_sw_decision(model, 0.05)
 get_loocv_rmse(model)
