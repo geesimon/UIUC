@@ -178,7 +178,7 @@ house_data = read_csv(&quot;HousePrices/train.csv&quot;)
 head(house_data[,c(&quot;SalePrice&quot;, &quot;MSZoning&quot;, &quot;LotArea&quot;, &quot;OverallQual&quot;,
                    &quot;TotRmsAbvGrd&quot;, &quot;YearBuilt&quot;, &quot;BedroomAbvGr&quot;, &quot;BsmtFullBath&quot;,
                    &quot;GarageCars&quot;)])</code></pre>
-<pre><code>## # A tibble: 6 × 9
+<pre><code>## # A tibble: 6 x 9
 ##   SalePrice MSZoning LotArea OverallQual TotRmsAbvGrd YearBuilt
 ##       &lt;int&gt;    &lt;chr&gt;   &lt;int&gt;       &lt;int&gt;        &lt;int&gt;     &lt;int&gt;
 ## 1    208500       RL    8450           7            8      2003
@@ -204,7 +204,11 @@ head(house_data[,c(&quot;SalePrice&quot;, &quot;MSZoning&quot;, &quot;LotArea&qu
 <li>Remove predictor with too many NAs (&gt; 10%)</li>
 <li>Replace categorical NA with</li>
 </ul>
-<pre class="r"><code>CategoricalNames = c(&quot;MSSubClass&quot;, &quot;MSZoning&quot;, &quot;Street&quot;, &quot;Alley&quot;, &quot;LotShape&quot;,
+<pre class="r"><code>#Combine FullBath and HalfBath
+house_data$Bath = house_data$FullBath + house_data$HalfBath * 0.5
+house_data = subset(house_data, select = -c(Id, FullBath, HalfBath))
+
+CategoricalNames = c(&quot;MSSubClass&quot;, &quot;MSZoning&quot;, &quot;Street&quot;, &quot;Alley&quot;, &quot;LotShape&quot;,
             &quot;LandContour&quot;, &quot;Utilities&quot;, &quot;LotConfig&quot;, &quot;LandSlope&quot;, 
             &quot;Neighborhood&quot;, &quot;Condition1&quot;, &quot;Condition2&quot;, &quot;BldgType&quot;, 
             &quot;HouseStyle&quot;, &quot;OverallQual&quot;, &quot;OverallCond&quot;, &quot;RoofStyle&quot;, 
@@ -212,15 +216,18 @@ head(house_data[,c(&quot;SalePrice&quot;, &quot;MSZoning&quot;, &quot;LotArea&qu
             &quot;ExterQual&quot;, &quot;ExterCond&quot;, &quot;Foundation&quot;, &quot;BsmtQual&quot;, 
             &quot;BsmtCond&quot;, &quot;BsmtExposure&quot;, &quot;BsmtFinType1&quot;, &quot;BsmtFinType2&quot;, 
             &quot;Heating&quot;, &quot;HeatingQC&quot;, &quot;CentralAir&quot;, &quot;Electrical&quot;, 
-            &quot;BsmtFullBath&quot;, &quot;BsmtHalfBath&quot;, &quot;FullBath&quot;,&quot;HalfBath&quot;, 
-            &quot;BedroomAbvGr&quot;, &quot;KitchenAbvGr&quot;,
-            &quot;KitchenQual&quot;, &quot;TotRmsAbvGrd&quot;,&quot;Functional&quot;, 
-            &quot;Fireplaces&quot;,&quot;FireplaceQu&quot;, 
-            &quot;GarageType&quot;,&quot;GarageFinish&quot;, &quot;GarageCars&quot;,&quot;GarageQual&quot;, &quot;GarageCond&quot;, 
+#           &quot;BsmtFullBath&quot;, &quot;BsmtHalfBath&quot;, 
+#           &quot;FullBath&quot;,&quot;HalfBath&quot;, 
+#           &quot;BedroomAbvGr&quot;, &quot;KitchenAbvGr&quot;,
+            &quot;KitchenQual&quot;, &quot;Functional&quot;, 
+#           &quot;TotRmsAbvGrd&quot;,
+#            &quot;Fireplaces&quot;,
+            &quot;FireplaceQu&quot;, 
+            &quot;GarageType&quot;,&quot;GarageFinish&quot;, 
+#           &quot;GarageCars&quot;,
+            &quot;GarageQual&quot;, &quot;GarageCond&quot;, 
             &quot;PavedDrive&quot;, &quot;PoolQC&quot;, &quot;Fence&quot;, &quot;MiscFeature&quot;, 
             &quot;SaleType&quot;, &quot;SaleCondition&quot;)
-
-NumericNames = colnames(house_data)[!colnames(house_data) %in% CategoricalNames]
 
 rm_index = c()
 for(i in 2:ncol(house_data)) {
@@ -246,7 +253,19 @@ for(i in 2:ncol(house_data)) {
 ## [1] 103.6853
 ## [1] &quot;GarageYrBlt&quot;
 ## [1] 1978.506</code></pre>
-<pre class="r"><code>house_data =  house_data[, -rm_index]</code></pre>
+<pre class="r"><code>house_data = subset(house_data, select = -rm_index)
+
+NumericNames = colnames(house_data)[!colnames(house_data) %in% CategoricalNames]
+
+cor(house_data[, NumericNames])[&quot;SalePrice&quot;,][cor(house_data[, NumericNames])[&quot;SalePrice&quot;,] &gt; 0.3]</code></pre>
+<pre><code>##    YearBuilt YearRemodAdd   MasVnrArea   BsmtFinSF1  TotalBsmtSF 
+##    0.5228973    0.5071010    0.4752413    0.3864198    0.6135806 
+##     1stFlrSF     2ndFlrSF    GrLivArea TotRmsAbvGrd   Fireplaces 
+##    0.6058522    0.3193338    0.7086245    0.5337232    0.4669288 
+##  GarageYrBlt   GarageCars   GarageArea   WoodDeckSF  OpenPorchSF 
+##    0.4701775    0.6404092    0.6234314    0.3244134    0.3158562 
+##    SalePrice         Bath 
+##    1.0000000    0.5979656</code></pre>
 <pre class="r"><code>library(lmtest)
 get_bp_decision = function(model, alpha) {
   decide = unname(bptest(model)$p.value &lt; alpha)
@@ -275,8 +294,9 @@ get_bp_decision(full_model, 0.05)</code></pre>
 <pre class="r"><code>get_loocv_rmse(full_model)</code></pre>
 <pre><code>## [1] Inf</code></pre>
 <pre class="r"><code>get_adj_r2(full_model)</code></pre>
-<pre><code>## [1] 0.9247104</code></pre>
-<pre class="r"><code>#mod_back_aic = step(full_model, direction = &quot;backward&quot;)</code></pre>
+<pre><code>## [1] 0.9233644</code></pre>
+<pre class="r"><code>#summary(m)$coefficient[summary(m)$coefficient[,&quot;Pr(&gt;|t|)&quot;] &lt; 0.1,]
+#mod_back_aic = step(full_model, direction = &quot;backward&quot;)</code></pre>
 <p>Weak Relation: 3SsnPorch,</p>
 </div>
 <div id="discussion" class="section level2">

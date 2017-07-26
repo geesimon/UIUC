@@ -110,7 +110,7 @@ The test shows `OverallQual`, `TotalBsmtSF`, `YearBuilt`, `YearRemodAdd`, `Exter
 ```{r}
 #Combine FullBath and HalfBath
 house_data$Bath = house_data$FullBath + house_data$HalfBath * 0.5
-house_data = subset(house_data, select = -c(FullBath, HalfBath))
+house_data = subset(house_data, select = -c(Id, FullBath, HalfBath))
 
 CategoricalNames = c("MSSubClass", "MSZoning", "Street", "Alley", "LotShape",
             "LandContour", "Utilities", "LotConfig", "LandSlope", 
@@ -132,8 +132,6 @@ CategoricalNames = c("MSSubClass", "MSZoning", "Street", "Alley", "LotShape",
             "GarageQual", "GarageCond", 
             "PavedDrive", "PoolQC", "Fence", "MiscFeature", 
             "SaleType", "SaleCondition")
-
-NumericNames = colnames(house_data)[!colnames(house_data) %in% CategoricalNames]
 
 rm_index = c()
 for(i in 2:ncol(house_data)) {
@@ -157,6 +155,8 @@ for(i in 2:ncol(house_data)) {
 }
 
 house_data = subset(house_data, select = -rm_index)
+
+
 ```
 
 ```{r, message=FALSE}
@@ -182,16 +182,24 @@ get_adj_r2 = function(model) {
 
 Try model and check assumption and LOOCV RMSE
 ```{r}
-full_model = lm(SalePrice ~ ., data = house_data)
+#full_model = lm(SalePrice ~ ., data = house_data)
 
-get_bp_decision(full_model, 0.05)
-get_sw_decision(full_model, 0.05)
-get_loocv_rmse(full_model)
-get_adj_r2(full_model)
+NumericNames = colnames(house_data)[!colnames(house_data) %in% CategoricalNames]
+
+cor(house_data[, NumericNames])["SalePrice",]
+
+model = lm(SalePrice ~ (YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + TotalBsmtSF +  GrLivArea + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars  + WoodDeckSF + OpenPorchSF + Bath) ^ 3, data = house_data)
+
+
+
+get_bp_decision(model, 0.05)
+get_sw_decision(model, 0.05)
+get_loocv_rmse(model)
+get_adj_r2(model)
 ```
 
 ```{r}
-summary(m)$coefficient[summary(m)$coefficient[,"Pr(>|t|)"] < 0.1,]
+#summary(m)$coefficient[summary(m)$coefficient[,"Pr(>|t|)"] < 0.1,]
 #mod_back_aic = step(full_model, direction = "backward")
 ```
 
@@ -206,7 +214,6 @@ General confusion appears when you mix in ordinal data, such as those 5-point "h
 
 - Competition result
 - Other linear approach
-
 
 ##Appendix
 - [`Kaggle Competition`](https://www.kaggle.com/c/house-prices-advanced-regression-techniques)
