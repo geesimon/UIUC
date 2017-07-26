@@ -128,6 +128,8 @@ $(document).ready(function () {
 <li><a href="#dataset-source">Dataset Source</a></li>
 <li><a href="#firstlook-of-the-data">Firstlook of the Data</a><ul>
 <li><a href="#data-preprocessing">Data Preprocessing</a></li>
+<li><a href="#discussion">Discussion</a></li>
+<li><a href="#appendix">Appendix</a></li>
 </ul></li>
 </ul>
 </div>
@@ -176,7 +178,7 @@ house_data = read_csv(&quot;HousePrices/train.csv&quot;)
 head(house_data[,c(&quot;SalePrice&quot;, &quot;MSZoning&quot;, &quot;LotArea&quot;, &quot;OverallQual&quot;,
                    &quot;TotRmsAbvGrd&quot;, &quot;YearBuilt&quot;, &quot;BedroomAbvGr&quot;, &quot;BsmtFullBath&quot;,
                    &quot;GarageCars&quot;)])</code></pre>
-<pre><code>## # A tibble: 6 x 9
+<pre><code>## # A tibble: 6 × 9
 ##   SalePrice MSZoning LotArea OverallQual TotRmsAbvGrd YearBuilt
 ##       &lt;int&gt;    &lt;chr&gt;   &lt;int&gt;       &lt;int&gt;        &lt;int&gt;     &lt;int&gt;
 ## 1    208500       RL    8450           7            8      2003
@@ -235,8 +237,8 @@ for(i in 2:ncol(house_data)) {
       if(sum(nas) &gt; 0) {
         print(colnames(house_data)[i])
         print(mean(house_data[[i]][!nas]))
+        house_data[[i]][nas] = mean(house_data[[i]][!nas])
       }
-      house_data[[i]][nas] = mean(house_data[[i]][!nas])
     }
   }
 }</code></pre>
@@ -274,6 +276,31 @@ get_bp_decision(full_model, 0.05)</code></pre>
 <pre><code>## [1] Inf</code></pre>
 <pre class="r"><code>get_adj_r2(full_model)</code></pre>
 <pre><code>## [1] 0.9247104</code></pre>
+<pre class="r"><code>#mod_back_aic = step(full_model, direction = &quot;backward&quot;)</code></pre>
+<p>Weak Relation: 3SsnPorch,</p>
+</div>
+<div id="discussion" class="section level2">
+<h2>Discussion</h2>
+<ul>
+<li>Whether we should make discrete variables in regression model a categorical predictors?</li>
+</ul>
+<p>The way to discern an interval/ratio variable is to ask if every unit increment in the variable indicates the same amount of increment in the context you wish you measure. For instance, the jump from 35 to 36 degrees is the same as the jump from 43 to 44; it’s the same amount of temperature difference. Likewise, the jump from 100 to 101 subscribers is the same as the jump from 1009 to 1010 subscribers. As long as this is true, your regression coefficient of that independent variable will make sense, because you can legitimately interpret it as the slope of the regression line.</p>
+<p>General confusion appears when you mix in ordinal data, such as those 5-point “how satisfied are you?” questions. They are expressed in whole number, very easily to be confused with discrete data. However, each jump in the scale does not necessarily mean the same thing. E.g. a jump from “4: happy” to “5: very happy” is not necessarily the same as a jump from “1: very unhappy” to “2: unhappy.” In that case, the variable should not be put into the regression as is, but treated differently (search “dummy variable in regression” to learn more.)</p>
+<ul>
+<li>Competition result</li>
+<li>Other linear approach</li>
+</ul>
+</div>
+<div id="appendix" class="section level2">
+<h2>Appendix</h2>
+<ul>
+<li><a href="https://www.kaggle.com/c/house-prices-advanced-regression-techniques"><code>Kaggle Competition</code></a></li>
+<li>Book
+<ul>
+<li>Applied Statistics with R by David Dalpiaz</li>
+<li>An Introduction to Statistical Learning with Applications in R by Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani</li>
+</ul></li>
+</ul>
 </div>
 </div>
 

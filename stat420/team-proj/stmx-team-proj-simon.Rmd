@@ -141,8 +141,8 @@ for(i in 2:ncol(house_data)) {
       if(sum(nas) > 0) {
         print(colnames(house_data)[i])
         print(mean(house_data[[i]][!nas]))
+        house_data[[i]][nas] = mean(house_data[[i]][!nas])
       }
-      house_data[[i]][nas] = mean(house_data[[i]][!nas])
     }
   }
 }
@@ -181,3 +181,25 @@ get_loocv_rmse(full_model)
 get_adj_r2(full_model)
 ```
 
+```{r}
+#mod_back_aic = step(full_model, direction = "backward")
+```
+
+Weak Relation: 3SsnPorch,
+
+##Discussion
+- Whether we should make discrete variables in regression model a categorical predictors?
+
+The way to discern an interval/ratio variable is to ask if every unit increment in the variable indicates the same amount of increment in the context you wish you measure. For instance, the jump from 35 to 36 degrees is the same as the jump from 43 to 44; it's the same amount of temperature difference. Likewise, the jump from 100 to 101 subscribers is the same as the jump from 1009 to 1010 subscribers. As long as this is true, your regression coefficient of that independent variable will make sense, because you can legitimately interpret it as the slope of the regression line.
+
+General confusion appears when you mix in ordinal data, such as those 5-point "how satisfied are you?" questions. They are expressed in whole number, very easily to be confused with discrete data. However, each jump in the scale does not necessarily mean the same thing. E.g. a jump from "4: happy" to "5: very happy" is not necessarily the same as a jump from "1: very unhappy" to "2: unhappy." In that case, the variable should not be put into the regression as is, but treated differently (search "dummy variable in regression" to learn more.)
+
+- Competition result
+- Other linear approach
+
+
+##Appendix
+- [`Kaggle Competition`](https://www.kaggle.com/c/house-prices-advanced-regression-techniques)
+- Book
+    - Applied Statistics with R by David Dalpiaz
+    - An Introduction to Statistical Learning with Applications in R by Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani
