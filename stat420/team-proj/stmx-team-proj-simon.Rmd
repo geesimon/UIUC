@@ -102,7 +102,14 @@ corrplot(cor(house_data_reg), method="circle")
 The test shows `OverallQual`, `TotalBsmtSF`, `YearBuilt`, `YearRemodAdd`, `ExterQual`, `FullBath`, `Fireplaces` has strong correlation with `SalePrice`.
 
 ## Data Preprocessing 
+Change column name to comply with R variable definition
+```{r}
+BadNames =  c(FirstFlrSF = "1stFlrSF", SecondFlrSF = "2ndFlrSF", ThreeSsnPorch = "3SsnPorch")
 
+for (i in 1:length(BadNames)) {
+  colnames(house_data)[which(colnames(house_data) == BadNames[i])] = names(BadNames[i])
+}
+```
 - Convert categorical predictor to factor and make NA an extra value
 - Remove predictor with too many NAs (> 10%)
 - Replace categorical NA with
@@ -155,9 +162,8 @@ for(i in 2:ncol(house_data)) {
 }
 
 house_data = subset(house_data, select = -rm_index)
-
-
 ```
+
 
 ```{r, message=FALSE}
 library(lmtest)
@@ -178,17 +184,59 @@ get_loocv_rmse = function(model) {
 get_adj_r2 = function(model) {
   summary(model)$adj.r.squared
 }
+
+plot_fitted_resid = function(model, pointcol = "dodgerblue", linecol = "darkorange") {
+  plot(fitted(model), resid(model), 
+       col = pointcol, pch = 20, cex = 1.5,
+       xlab = "Fitted", ylab = "Residuals")
+  abline(h = 0, col = linecol, lwd = 2)
+}
+
+plot_qq = function(model, pointcol = "dodgerblue", linecol = "darkorange") {
+  qqnorm(resid(model), col = pointcol, pch = 20, cex = 1.5)
+  qqline(resid(model), col = linecol, lwd = 2)
+}
+
+build_formula = function(response_name, predictor_names, interaction = 1) {
+  str_formula = paste(response_name, " ~ (")
+  
+  add_plus = FALSE
+  for (predictor_name in predictor_names) {
+    if(add_plus) str_formula = paste(str_formula, "+ ")
+    else add_plus = TRUE
+    
+    str_formula = paste(str_formula, predictor_name)
+  }
+  str_formula = paste(str_formula, ")")
+  
+  if(interaction > 1) str_formula = paste(str_formula, "^ ", interaction)
+  
+  as.formula(str_formula)
+}
+
+standardize = function (values) {
+  values / sqrt(sum((values - mean(values)) ^ 2) / length(values))
+}
 ```
 
 Try model and check assumption and LOOCV RMSE
+
+Categorical predictors: MSSubClass, MSZoning, LandContour, LotConfig, LandSlope, Neighborhood, Condition1, Condition2, BldgType, OverallQual, OverallCond, RoofStyle, Exterior1st, Foundation, BsmtQual, BsmtExposure, KitchenQual, Functional, SaleCondition
+
 ```{r}
 #full_model = lm(SalePrice ~ ., data = house_data)
 
 NumericNames = colnames(house_data)[!colnames(house_data) %in% CategoricalNames]
 
-cor(house_data[, NumericNames])["SalePrice",]
+c = cor(house_data[, NumericNames])["SalePrice",]
+SignificantPredictors = sort(c[c > 0.1 & c < 1], decreasing = TRUE)
 
-model = lm(SalePrice ~ (YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + TotalBsmtSF +  GrLivArea + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars  + WoodDeckSF + OpenPorchSF + Bath) ^ 3, data = house_data)
+model = lm(as.formula(build_formula("SalePrice", names(SignificantPredictors))), 
+                      data = house_data)
+
+#model = lm(as.formula(build_formula("SalePrice", names(vif(model)[vif(model) < 5]))), data = house_data)
+
+#model = lm(SalePrice ~ (YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + TotalBsmtSF +  GrLivArea + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars  + WoodDeckSF + OpenPorchSF + Bath) ^ 3, data = house_data)
 
 get_bp_decision(model, 0.05)
 get_sw_decision(model, 0.05)
