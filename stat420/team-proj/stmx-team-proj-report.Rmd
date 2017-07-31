@@ -56,6 +56,7 @@ The variables were a mix of nominal, ordinal, continuous, and discrete variables
 ```{r, include=FALSE}
 library(readr)
 house_data = read_csv("HousePrices/train.csv")
+head(house_data)
 ```
 
 Change column name to comply with R variable definition
@@ -172,10 +173,28 @@ build_formula = function(response_name, predictor_names, interaction = 1) {
 }
 ```
 
+To do: 
+- Inspect the data
+- Plot the correlation
+
+We select the significant predictors that have high correlation with SalePrice
+```{r}
+num_house_data = house_data
+for(name in colnames(num_house_data)){
+  if(is.factor(num_house_data[[name]])) 
+    num_house_data[[name]] = as.numeric(num_house_data[[name]])
+}
+
+all_cor = cor(num_house_data)
+(sig_predictors_cor = sort(abs(all_cor["SalePrice", abs(all_cor["SalePrice",]) > 0.5]), decreasing = TRUE))
+```
+
 Build a model with only numerical predictors and VIF < 5. 
 ```{r}
 library(faraway)
 #full_model = lm(SalePrice ~ ., data = house_data)
+
+sort(abs(all_cor["SalePrice", abs(all_cor["SalePrice",]) > 0.5]), decreasing = TRUE)
 
 NumericalNames = colnames(house_data)[!colnames(house_data) %in% CategoricalNames]
 
@@ -242,3 +261,4 @@ General confusion appears when you mix in ordinal data, such as those 5-point "h
 - Book
     - Applied Statistics with R by David Dalpiaz
     - An Introduction to Statistical Learning with Applications in R by Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani
+- [`Examining your data`](http://www.personal.psu.edu/jxb14/M554/articles/Hair%20et%20al%202010%20--%20Chapter%202.pdf)

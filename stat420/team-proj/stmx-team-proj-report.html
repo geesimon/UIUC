@@ -239,6 +239,7 @@ for(i in 1:ncol(house_data)) {
 ## [1] &quot;( MiscFeature ) Removed&quot;</code></pre>
 <pre class="r"><code>CategoricalNames = CategoricalNames[!(CategoricalNames %in% colnames(house_data)[rm_index])]
 house_data = subset(house_data, select = -rm_index)</code></pre>
+<p>To do: - Inspect the data - Plot the correlation</p>
 <p>Build a model with only numerical predictors and VIF &lt; 5.</p>
 <pre class="r"><code>library(faraway)
 #full_model = lm(SalePrice ~ ., data = house_data)

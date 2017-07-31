@@ -224,6 +224,7 @@ Try model and check assumption and LOOCV RMSE
 Categorical predictors: MSSubClass, MSZoning, LandContour, LotConfig, LandSlope, Neighborhood, Condition1, Condition2, BldgType, OverallQual, OverallCond, RoofStyle, Exterior1st, Foundation, BsmtQual, BsmtExposure, KitchenQual, Functional, SaleCondition
 
 ```{r}
+library(faraway)
 #full_model = lm(SalePrice ~ ., data = house_data)
 
 NumericNames = colnames(house_data)[!colnames(house_data) %in% CategoricalNames]
@@ -231,17 +232,22 @@ NumericNames = colnames(house_data)[!colnames(house_data) %in% CategoricalNames]
 c = cor(house_data[, NumericNames])["SalePrice",]
 SignificantPredictors = sort(c[c > 0.1 & c < 1], decreasing = TRUE)
 
-model = lm(as.formula(build_formula("SalePrice", names(SignificantPredictors))), 
+full_numeric_model = lm(as.formula(build_formula("log(SalePrice)", names(SignificantPredictors))), 
                       data = house_data)
 
-#model = lm(as.formula(build_formula("SalePrice", names(vif(model)[vif(model) < 5]))), data = house_data)
+start_model = lm(log(SalePrice) ~ GrLivArea + GarageCars + TotalBsmtSF + YearBuilt + YearRemodAdd, data = house_data)
+  
+good_vif_model = lm(as.formula(build_formula("SalePrice", names(vif(start_model)[vif(start_model) < 5]), 3)), data = house_data)
+
+Neighborhood_Model = lm(SalePrice ~ Neighborhood, data = house_data)
+cor(resid(start_model), resid(Neighborhood_Model))
 
 #model = lm(SalePrice ~ (YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + TotalBsmtSF +  GrLivArea + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars  + WoodDeckSF + OpenPorchSF + Bath) ^ 3, data = house_data)
 
-get_bp_decision(model, 0.05)
-get_sw_decision(model, 0.05)
-get_loocv_rmse(model)
-get_adj_r2(model)
+#get_bp_decision(model, 0.05)
+#get_sw_decision(model, 0.05)
+#get_loocv_rmse(model)
+#get_adj_r2(model)
 ```
 
 ```{r}
@@ -266,3 +272,10 @@ General confusion appears when you mix in ordinal data, such as those 5-point "h
 - Book
     - Applied Statistics with R by David Dalpiaz
     - An Introduction to Statistical Learning with Applications in R by Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani
+    
+
+lm(formula = log(SalePrice) ~ GrLivArea + GarageCars + TotalBsmtSF + YearBuilt + YearRemodAdd, data = house_data)
+
+m = lm(formula = SalePrice ~ GrLivArea + GarageCars + TotalBsmtSF + 
++     YearBuilt + YearRemodAdd + OverallQual + Neighborhood + SaleCondition + 
++     TotalBsmtSF:OverallQual + GrLivArea:Neighborhood, data = house_data)
