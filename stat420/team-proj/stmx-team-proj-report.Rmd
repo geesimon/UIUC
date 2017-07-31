@@ -186,59 +186,70 @@ for(name in colnames(num_house_data)){
 }
 
 all_cor = cor(num_house_data)
-(sig_predictors_cor = sort(abs(all_cor["SalePrice", abs(all_cor["SalePrice",]) > 0.5]), decreasing = TRUE))
+(sig_cor = sort(abs(all_cor["SalePrice", abs(all_cor["SalePrice",]) > 0.5]), decreasing = TRUE)[-1])
 ```
 
-Build a model with only numerical predictors and VIF < 5. 
+We first build a model with predictors that has cor values > 0.5
 ```{r}
 library(faraway)
-#full_model = lm(SalePrice ~ ., data = house_data)
-
-sort(abs(all_cor["SalePrice", abs(all_cor["SalePrice",]) > 0.5]), decreasing = TRUE)
-
-NumericalNames = colnames(house_data)[!colnames(house_data) %in% CategoricalNames]
-
-num_cor = cor(house_data[, NumericalNames])["SalePrice",]
-num_sig_names = sort(num_cor[num_cor > 0.5 & num_cor < 1], decreasing = TRUE)
-
-num_model = lm(as.formula(build_formula("SalePrice", names(num_sig_names))), 
-                      data = house_data)
-core_num_names = names(vif(num_model)[vif(num_model) < 5])
-start_model = lm(as.formula(build_formula("SalePrice", core_num_names)), 
-                 data = house_data)
-summary(start_model)$coefficient
+sig_model = lm(build_formula("log(SalePrice)", names(sig_cor)), data = house_data)
+summary(sig_model)$adj.r.squared
+sort(vif(sig_model)[vif(sig_model) > 5], decreasing = TRUE)
 ```
-We can see both the model and individual parameters are significant. 
+This model has good adjusted r-squared value. However, we do see many predictors has high VIFs. Although, high VIFs won't cause big problem to prediction, too many correlated predictors dose impact our capability to search through other better models using interaction or polynomial. This could also cause problem to analyze high leverage and calculate LOOCV RMSE because not able to solve $\left(X^\top X\right)^{-1}$.
 
+We see `OverallQual` gives us the most trouble although  VIF of `OverallQual2` is `r vif(sig_model)["OverallQual2"][[1]]`. Let's first try to remove this predictor and see what happen.
 ```{r}
-get_adj_r2(start_model)
-plot_fitted_resid(start_model)
-#summary(m)$coefficient[summary(m)$coefficient[,"Pr(>|t|)"] < 0.1,]
-#mod_back_aic = step(full_model, direction = "backward")
+predictors = names(sig_cor)[names(sig_cor) != "OverallQual"]
+no_overallqual_model = lm(build_formula("log(SalePrice)", predictors), data = house_data)
+summary(no_overallqual_model)$adj.r.squared
+anova(no_overallqual_model, sig_model)[2, "Pr(>F)"]
 ```
-The Fitted versus Residuals plot shows tthat for larger fitted values, the spread of the residuals is larger. Thus we apply log on SalePrice to stablize response variance.
-```{r}
-start_model_log = lm(as.formula(build_formula("log(SalePrice)", core_num_names)), 
-                 data = house_data)
-get_adj_r2(start_model_log)
-plot_fitted_resid(start_model_log)
+However, after removing `OverallQual`, adjusted r-squared dropped `r summary(sig_model)$adj.r.squared - summary(no_overallqual_model)$adj.r.squared`, the significant test also reject the $OverallQual = 0$ hypothesis.  All these evidences mean `OverallQual` is useful for our predicction.
+
+Let's check the relation between `OverallQual` and `Log(SalePrice)`
+```{r, echo=FALSE}
+boxplot(log(SalePrice) ~ OverallQual, data = house_data, col = "darkorange", border = "dodgerblue")
 ```
 
-The log transformation of SalePrice both make the variance stable and bigger adjusted r-squared. 
-
-Now let's try to add categorical predictors by step selection procedure
+It's quite linear and increase of 1 score of OverallQual has constant change on `log(SalePrice)`. Thus, we could convert this categorical predictor to numerical predictor.
 
 ```{r}
-scope_formula = build_formula("log(SalePrice)", c(CategoricalNames, core_num_names))
-#for (name in CategoricalNames) {
-#  m = lm(build_formula("log(SalePrice)", c(core_num_names, name)), data = house_data)
-#  anova(start_model_log, m)  
-#}
-model_aic = step(start_model_log, scope = scope_formula, direction = "forward", trace = 0)
-summary(model_aic)
+house_data$OverallQual = as.numeric(house_data$OverallQual)
+model_1 = lm(build_formula("log(SalePrice)", names(sig_cor)), data = house_data)
+summary(model_1)$adj.r.squared
+```
 
-model_bic = step(start_model_log, scope = scope_formula, direction = "forward", trace = 0, k = log(nrow(house_data)))
-summary(model_bic)
+Let's do the similar check on `ExterQual` 
+```{r}
+predictors = names(sig_cor)[names(sig_cor) != "ExterQual"]
+model_2 = lm(build_formula("log(SalePrice)", predictors), data = house_data)
+summary(model_2)$adj.r.squared
+anova(model_2, model_1)[2, "Pr(>F)"]
+```
+Interesting enough, by removing `ExterQual`, the adjusted r-squared wasn't changed much. The signifciant test also fail to reject the $ExterQual = 0$ hypothesis.
+
+The VIFs of `GarageCars`, `TotalBsmtSF`, `KitchenQual`, `BsmtQual` and `GrLivArea` aren't that big. We perform search to find the best model.
+```{r}
+model_aic = step(model_2, direction="backward", trace=0)
+model_bic = step(model_2, direction="backward", k = log(nrow(house_data)), trace=0)
+(rmse_aic  = get_loocv_rmse(model_aic))
+(rmse_bic  = get_loocv_rmse(model_bic))
+
+if(rmse_aic < rmse_aic) {
+  start_model = model_aic
+} else {
+  start_model = model_bic
+}
+coef(start_model)
+```
+According to LOOCV RMSE, BIC search gives us the best model to start. This model is very good for interpretation as it balances between number of predictors and RMSE. Since our goal it to make best predition, we should explore furthur to find the model with best RMSE.
+
+```{r}
+start_predictors = attr(summary(start_model)$term,"term.labels")
+remaining_predictors = colnames(house_data)[!colnames(house_data) %in% c(names(sig_cor), "SalePrice")]
+
+#model = step(start_model, scope = build_formula("log(SalePrice)", all_predictors), direction = "forward", trace=0)
 ```
 
 #Results 
