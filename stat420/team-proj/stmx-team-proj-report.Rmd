@@ -236,14 +236,27 @@ build_formula = function(response_name, predictor_names, interaction = 1) {
   
   as.formula(str_formula)
 }
+
+#Get predictor true name from dummy variable names
+get_predictor_name = function(all_names, dummy_names) {
+  names = c()
+  for(name in all_names) {
+    result = pmatch(name, dummy_names)
+    if(!is.na(result) && result > 0) {
+      names = c(names, name)
+    }
+  }
+  names
+}
 ```
 
 ##Predictor Selection
 To do: 
 - Plot the correlation
 
-We select the significant predictors that have high correlation with SalePrice
+We select the significant predictors that have high correlation with SalePrice.
 ```{r}
+#We convert all factor variables to numeric in order to call cor()
 num_house_data = house_data
 for(name in colnames(num_house_data)){
   if(is.factor(num_house_data[[name]])) 
@@ -272,7 +285,7 @@ anova(no_overallqual_model, sig_model)[2, "Pr(>F)"]
 ```
 However, after removing `OverallQual`, adjusted r-squared dropped `r summary(sig_model)$adj.r.squared - summary(no_overallqual_model)$adj.r.squared`, the significant test also reject the $OverallQual = 0$ hypothesis.  All these evidences mean `OverallQual` is useful for our predicction.
 
-If we check the plot above, we can see the relation between each value of `OverallQual` and its mean of `Log_SalePrice` is quite linear. Increasing of 1 score of `OverallQual` has constant change on `Log_SalePrice`. Therefore, we can convert this categorical predictor to numerical predictor.
+If we check the `Log_SalePrice ~ OverallQual` plot above, we can see each value of `OverallQual` and the mapped mean of `Log_SalePrice` is quite linear. This means, increasing 1 score of `OverallQual` has constant change on `Log_SalePrice`. Therefore, we can convert this categorical predictor to numerical predictor.
 
 ```{r}
 predictors = c(predictors, "OverallQual")
@@ -281,13 +294,39 @@ model_1 = lm(build_formula("Log_SalePrice", names(sig_cor)), data = house_data)
 summary(model_1)$adj.r.squared
 ```
 
+To handle the remaining predictors, we make a function so that we can remove the predictor one-by-one. The reason we do this one-by-one instead of all of high VIF predictors together is because removing of one high VIF predictor could lower the VIF of other predictors. We try to keep as many predictors as we can in order to improve prediction.
+
+```{r, warning=FALSE}
+rm_highvif_predictor = function(y_name, x_names, data, nstep = 0) {
+  repeat {
+    m = lm(build_formula(y_name, x_names), data = data)
+    high_vifs = vif(model_1)[vif(model_1) > 5]
+    if(length(high_vifs) == 0) break
+
+    print(sort(high_vifs, decreasing = TRUE)[1])
+    rm_name = get_predictor_name(colnames(data), 
+                                 names(sort(high_vifs, decreasing = TRUE))[1])
+    print(rm_name)
+    x_names = x_names[x_names != rm_name]
+    
+    nstep = nstep - 1
+    if(nstep == 0) break
+  }
+  x_names
+}
+
+rm_highvif_predictor("Log_SalePrice", predictors, data = house_data, nstep = 2 )
+
+```
+
 
 Let's do the similar check on `GarageYrBlt` 
-```{r}
+```{r, warning=FALSE}
+
+
 predictors = predictors[predictors != "GarageYrBlt"]
 model_2 = lm(build_formula("Log_SalePrice", predictors), data = house_data)
-summary(model_2)$adj.r.squared
-anova(model_2, model_1)[2, "Pr(>F)"]
+vif(model_2)[vif(model_2) > 5]
 ```
 We can see removing of `GarageYrBlt`, the adjusted r-squared wasn't changed much. 
 
@@ -304,19 +343,10 @@ all_mod = summary(regsubsets(build_formula("Log_SalePrice", predictors), data = 
 all_mod$adjr2
 ```
 ```{r}
-partial_match = function(partial_names, full_names) {
-  names = c()
-  for(name in partial_names) {
-    result = pmatch(name, full_names)
-    if(!is.na(result) && result > 0) {
-      names = c(names, name)
-    }
-  }
-  names
-}
+
 
 (predictors = names(all_mod$which[13,])[all_mod$which[13,]][-1])
-predictors  = partial_match(colnames(house_data), predictors)
+predictors  = get_predictor_name(colnames(house_data), predictors)
   
 model_4 = lm(build_formula("Log_SalePrice", predictors), data = house_data)
 vif(model_4)[vif(model_4) > 5]
@@ -330,13 +360,24 @@ vif(model_5)[vif(model_5) > 5]
 ```
 This give us a model that has no collinearity problem and also very easy to interpret.
 ```{r}
-vif_model = model_5
-coef(vif_model)
-summary(vif_model)$r.squared
+good_vif_model = model_5
+coef(good_vif_model)
+summary(good_vif_model)$r.squared
 ```
 ```
 
-Note: we could also remove the high VIF variable one by one. But per test, such approach won't give us better model than this one.
+As side note, we could also remove the high VIF variable one by one. This will give us a model as,
+
+```{r}
+start_model = model_1
+
+do {
+  top_vif = sort(vif(model_1)[vif(model_1) > 5], decreasing = TRUE)[1]
+  rm_predictor = get_predictor_name(colnames(house_data), c(names(top_vif)))
+}
+```
+
+
 
 The VIFs of `GarageCars`, `TotalBsmtSF`, `KitchenQual`, `BsmtQual` and `GrLivArea` aren't that big. We perform search to find the best model.
 ```{r}
@@ -360,6 +401,8 @@ According to LOOCV RMSE, BIC search gives us the best model to start. This model
 ```
 
 ## Optimize for LOOCV RMSE 
+We should give categorical predictors a second chance.
+
 ```{r}
 #start_predictors = attr(summary(start_model)$term,"term.labels")
 #remaining_predictors = colnames(house_data)[!colnames(house_data) %in% c(names(sig_cor), "SalePrice")]
