@@ -52,14 +52,27 @@ Inspired by [`Kaggle Competition`](https://www.kaggle.com/c/house-prices-advance
 The variables were a mix of nominal, ordinal, continuous, and discrete variables used in calculation of assessed values and included physical property measurements in addition to computation variables used in the city’s assessment process. Variables that required specific housing or assessing knowledge or previous calculations were removed from the final dataset.  
 
 # Methods
-## Data Preprocessing 
+## Check the data
+We load the data and store it to variable `house_data`. Let's take a look on the data
 ```{r, include=FALSE}
 library(readr)
 house_data = read_csv("HousePrices/train.csv")
 head(house_data)
 ```
 
-Change column name to comply with R variable definition
+```{r, echo=FALSE, fig.height=8, fig.width=8}
+par(mfrow=c(3,2))
+plot(SalePrice ~ GrLivArea, data = house_data, pch  = 20, cex  = 2, col  = "dodgerblue")
+hist(house_data$SalePrice, col = "dodgerblue",border = "darkorange")
+hist(house_data$GrLivArea, col = "dodgerblue",border = "darkorange")
+hist(house_data$LotArea, col = "dodgerblue",border = "darkorange")
+boxplot(SalePrice ~ OverallQual, data = house_data, pch = 20, cex = 2, col = "darkorange", border = "dodgerblue")
+boxplot(SalePrice ~ Neighborhood, data = house_data, pch = 20, cex = 2, col = "darkorange", border = "dodgerblue")
+```
+
+## Data Preprocessing
+###Change Predictor Name
+R doesn't allow variable name start with a number, thus we change some column names to comply with R variable definition.
 ```{r}
 BadNames =  c(FirstFlrSF = "1stFlrSF", SecondFlrSF = "2ndFlrSF", ThreeSsnPorch = "3SsnPorch")
 
@@ -67,16 +80,10 @@ for (i in 1:length(BadNames)) {
   colnames(house_data)[which(colnames(house_data) == BadNames[i])] = names(BadNames[i])
 }
 ```
-- Convert categorical predictor to factor and make NA an extra value
-- Remove predictor with too many NAs (> 50%). In our data, NA is not a invalid value for most categorical predictors, but too many NA makes this predictor not very useful.
-- Replace numerical NA with mean
 
-```{r}
-#Combine FullBath and HalfBath
-house_data$Bath = house_data$FullBath + house_data$HalfBath * 0.5
-house_data = subset(house_data, select = -c(Id, FullBath, HalfBath))
-
-CategoricalNames = c("MSSubClass", "MSZoning", "Street", "Alley", "LotShape",
+We stores all categorical predictor names in variable `CategoricalPredictors` and numerical predictor names in variable `NumericPredictors`.
+```{r, include=FALSE}
+CategoricalPredictors = c("MSSubClass", "MSZoning", "Street", "Alley", "LotShape",
             "LandContour", "Utilities", "LotConfig", "LandSlope", 
             "Neighborhood", "Condition1", "Condition2", "BldgType", 
             "HouseStyle", "OverallQual", "OverallCond", "RoofStyle", 
@@ -84,42 +91,100 @@ CategoricalNames = c("MSSubClass", "MSZoning", "Street", "Alley", "LotShape",
             "ExterQual", "ExterCond", "Foundation", "BsmtQual", 
             "BsmtCond", "BsmtExposure", "BsmtFinType1", "BsmtFinType2", 
             "Heating", "HeatingQC", "CentralAir", "Electrical", 
-#           "BsmtFullBath", "BsmtHalfBath", 
-#           "FullBath","HalfBath", 
-#           "BedroomAbvGr", "KitchenAbvGr",
-            "KitchenQual", "Functional", 
-#           "TotRmsAbvGrd",
-#            "Fireplaces",
-            "FireplaceQu", 
-            "GarageType","GarageFinish", 
-#           "GarageCars",
-            "GarageQual", "GarageCond", 
+            "KitchenQual", "Functional", "FireplaceQu", 
+            "GarageType","GarageFinish", "GarageQual", "GarageCond", 
             "PavedDrive", "PoolQC", "Fence", "MiscFeature", 
-            "SaleType", "SaleCondition")
+            "SaleType", "SaleCondition", "MoSold")
 
-rm_index = c()
-for(i in 1:ncol(house_data)) {
-  nas = is.na(house_data[[i]])
+NumericPredictors = colnames(house_data)[!colnames(house_data) %in% c(CategoricalPredictors, "Id")]
+```
+```{r}
+(CategoricalPredictors)
+(NumericPredictors)
+```
+
+###Missing Data
+- Remove predictor with too many NAs (> 20%). In our data, NA is not a invalid value for most categorical predictors, but too many NA makes this predictor not very useful.
+- Replace numerical NA with mean
+- Convert categorical predictor to factor and make NA an extra value
+
+```{r}
+rm_names = c()
+for(name in colnames(house_data)) {
+  nas = is.na(house_data[[name]])
   
-  if(sum(nas) / nrow(house_data) > 0.5) {
-    print(paste("(", colnames(house_data)[i], ") Removed"))
-    rm_index = c(rm_index, i)
+  if(sum(nas) / nrow(house_data) > 0.2) {
+    print(paste("(", name, ") Removed"))
+    rm_names = c(rm_names, name)
     
   } else {
-    if(colnames(house_data)[i] %in% CategoricalNames) { #Categorical predictor
-      house_data[[i]] = factor(house_data[[i]], exclude = NULL)
+    if(name %in% CategoricalPredictors) { #Categorical predictor
+      house_data[[name]] = factor(house_data[[name]], exclude = NULL)
     } else{
       if(sum(nas) > 0) {
-        house_data[[i]][nas] = mean(house_data[[i]][!nas])
+        house_data[[name]][nas] = mean(house_data[[name]][!nas])
       }
     }
   }
 }
 
-CategoricalNames = CategoricalNames[!(CategoricalNames %in% colnames(house_data)[rm_index])]
-house_data = subset(house_data, select = -rm_index)
+house_data = house_data[, !colnames(house_data) %in% rm_names]
+
+#Remove these predictors from categorical predictors
+CategoricalPredictors = CategoricalPredictors[CategoricalPredictors %in% colnames(house_data)]
+#Remove these predictors from numerical predictors
+NumericPredictors = NumericPredictors[NumericPredictors %in% colnames(house_data)]
 ```
 
+###Normalize Data
+According to the plots in section "Check the data", we can see distribution of `SalePrice` is not normalized (why it should be?). The variance of SalePrice ~ GrLivArea is also not constant. Check the summary of these 2 variables.
+```{r}
+summary(house_data$SalePrice)
+summary(house_data$GrLivArea)
+```
+The range of these 2 variables are pretty large. To extend this thinking, it is very likely some variables for space size (like: GrLivArea, LotArea) may have same characteristic. We can normalize and stablize the data through log transformation. 
+
+As the rule, we find the numerical predictors that have large range (max/min > 10) and replace it with log value.
+
+Note: It is not recommended to change the data directly and better to use model formula instead. We do this to help our later analysis and model selection.
+```{r}
+var_names = c()
+for(name in NumericPredictors) {
+  if(range(house_data[[name]])[1] > 0 && 
+     range(house_data[[name]])[2] / range(house_data[[name]])[1] > 10) {
+    var_names = c(var_names, name)
+  }
+}
+
+(var_names)
+```
+```{r}
+for(name in var_names) {
+  house_data[paste("Log_", name, sep = "")] = log(house_data[[name]])
+}
+
+house_data = house_data[, !colnames(house_data) %in% var_names]
+```
+
+We then replot the data.
+
+```{r, echo=FALSE, fig.height=8, fig.width=8}
+par(mfrow=c(3,2))
+plot(Log_SalePrice ~ Log_GrLivArea, data = house_data, pch  = 20, cex  = 2, col  = "dodgerblue")
+hist(house_data$Log_SalePrice, col = "dodgerblue",border = "darkorange")
+hist(house_data$Log_GrLivArea, col = "dodgerblue",border = "darkorange")
+hist(house_data$Log_LotArea, col = "dodgerblue",border = "darkorange")
+boxplot(Log_SalePrice ~ OverallQual, data = house_data, pch = 20, cex = 2, col = "darkorange", border = "dodgerblue")
+boxplot(Log_SalePrice ~ Neighborhood, data = house_data, pch = 20, cex = 2, col = "darkorange", border = "dodgerblue")
+```
+Except the Neighborhood plot doesn't have much change, other plots look much better.
+
+###Combine predictors
+```{r}
+#Combine FullBath and HalfBath
+house_data$Bath = house_data$FullBath + house_data$HalfBath * 0.5
+house_data = subset(house_data, select = -c(Id, FullBath, HalfBath))
+```
 
 ```{r, message=FALSE, include=FALSE}
 #Utility functions
@@ -173,8 +238,8 @@ build_formula = function(response_name, predictor_names, interaction = 1) {
 }
 ```
 
+##Predictor Selection
 To do: 
-- Inspect the data
 - Plot the correlation
 
 We select the significant predictors that have high correlation with SalePrice
@@ -186,68 +251,118 @@ for(name in colnames(num_house_data)){
 }
 
 all_cor = cor(num_house_data)
-(sig_cor = sort(abs(all_cor["SalePrice", abs(all_cor["SalePrice",]) > 0.5]), decreasing = TRUE)[-1])
+(sig_cor = sort(abs(all_cor["Log_SalePrice", abs(all_cor["Log_SalePrice",]) > 0.5]), decreasing = TRUE)[-1])
 ```
 
 We first build a model with predictors that has cor values > 0.5
-```{r}
+```{r, warning=FALSE}
 library(faraway)
-sig_model = lm(build_formula("log(SalePrice)", names(sig_cor)), data = house_data)
+sig_model = lm(build_formula("Log_SalePrice", names(sig_cor)), data = house_data)
 summary(sig_model)$adj.r.squared
 sort(vif(sig_model)[vif(sig_model) > 5], decreasing = TRUE)
 ```
 This model has good adjusted r-squared value. However, we do see many predictors has high VIFs. Although, high VIFs won't cause big problem to prediction, too many correlated predictors dose impact our capability to search through other better models using interaction or polynomial. This could also cause problem to analyze high leverage and calculate LOOCV RMSE because not able to solve $\left(X^\top X\right)^{-1}$.
 
-We see `OverallQual` gives us the most trouble although  VIF of `OverallQual2` is `r vif(sig_model)["OverallQual2"][[1]]`. Let's first try to remove this predictor and see what happen.
+We see `OverallQual` gives us the most trouble although VIF of `OverallQual2` is `r vif(sig_model)["OverallQual2"][[1]]`. Let's first try to remove this predictor and see what will happen.
 ```{r}
 predictors = names(sig_cor)[names(sig_cor) != "OverallQual"]
-no_overallqual_model = lm(build_formula("log(SalePrice)", predictors), data = house_data)
+no_overallqual_model = lm(build_formula("Log_SalePrice", predictors), data = house_data)
 summary(no_overallqual_model)$adj.r.squared
 anova(no_overallqual_model, sig_model)[2, "Pr(>F)"]
 ```
 However, after removing `OverallQual`, adjusted r-squared dropped `r summary(sig_model)$adj.r.squared - summary(no_overallqual_model)$adj.r.squared`, the significant test also reject the $OverallQual = 0$ hypothesis.  All these evidences mean `OverallQual` is useful for our predicction.
 
-Let's check the relation between `OverallQual` and `Log(SalePrice)`
-```{r, echo=FALSE}
-boxplot(log(SalePrice) ~ OverallQual, data = house_data, col = "darkorange", border = "dodgerblue")
-```
-
-It's quite linear and increase of 1 score of OverallQual has constant change on `log(SalePrice)`. Thus, we could convert this categorical predictor to numerical predictor.
+If we check the plot above, we can see the relation between each value of `OverallQual` and its mean of `Log_SalePrice` is quite linear. Increasing of 1 score of `OverallQual` has constant change on `Log_SalePrice`. Therefore, we can convert this categorical predictor to numerical predictor.
 
 ```{r}
+predictors = c(predictors, "OverallQual")
 house_data$OverallQual = as.numeric(house_data$OverallQual)
-model_1 = lm(build_formula("log(SalePrice)", names(sig_cor)), data = house_data)
+model_1 = lm(build_formula("Log_SalePrice", names(sig_cor)), data = house_data)
 summary(model_1)$adj.r.squared
 ```
 
-Let's do the similar check on `ExterQual` 
+
+Let's do the similar check on `GarageYrBlt` 
 ```{r}
-predictors = names(sig_cor)[names(sig_cor) != "ExterQual"]
-model_2 = lm(build_formula("log(SalePrice)", predictors), data = house_data)
+predictors = predictors[predictors != "GarageYrBlt"]
+model_2 = lm(build_formula("Log_SalePrice", predictors), data = house_data)
 summary(model_2)$adj.r.squared
 anova(model_2, model_1)[2, "Pr(>F)"]
 ```
-Interesting enough, by removing `ExterQual`, the adjusted r-squared wasn't changed much. The signifciant test also fail to reject the $ExterQual = 0$ hypothesis.
+We can see removing of `GarageYrBlt`, the adjusted r-squared wasn't changed much. 
+
+```{r}
+predictors = predictors[predictors != "GarageType"]
+model_3 = lm(build_formula("Log_SalePrice", predictors), data = house_data)
+vif(model_3)[vif(model_3) > 5]
+```
+
+For the remaning variables, instead of checking them one by one, we do a exhausted search.
+```{r}
+library(leaps)
+all_mod = summary(regsubsets(build_formula("Log_SalePrice", predictors), data = house_data, nvmax = 20))
+all_mod$adjr2
+```
+```{r}
+partial_match = function(partial_names, full_names) {
+  names = c()
+  for(name in partial_names) {
+    result = pmatch(name, full_names)
+    if(!is.na(result) && result > 0) {
+      names = c(names, name)
+    }
+  }
+  names
+}
+
+(predictors = names(all_mod$which[13,])[all_mod$which[13,]][-1])
+predictors  = partial_match(colnames(house_data), predictors)
+  
+model_4 = lm(build_formula("Log_SalePrice", predictors), data = house_data)
+vif(model_4)[vif(model_4) > 5]
+```
+
+We remove all predictors that have VIF > 5.
+```{r}
+predictors = predictors[!predictors %in% c("ExterQual", "BsmtQual")]
+model_5 = lm(build_formula("Log_SalePrice", predictors), data = house_data)
+vif(model_5)[vif(model_5) > 5]
+```
+This give us a model that has no collinearity problem and also very easy to interpret.
+```{r}
+vif_model = model_5
+coef(vif_model)
+summary(vif_model)$r.squared
+```
+```
+
+Note: we could also remove the high VIF variable one by one. But per test, such approach won't give us better model than this one.
 
 The VIFs of `GarageCars`, `TotalBsmtSF`, `KitchenQual`, `BsmtQual` and `GrLivArea` aren't that big. We perform search to find the best model.
 ```{r}
-model_aic = step(model_2, direction="backward", trace=0)
-model_bic = step(model_2, direction="backward", k = log(nrow(house_data)), trace=0)
-(rmse_aic  = get_loocv_rmse(model_aic))
-(rmse_bic  = get_loocv_rmse(model_bic))
-
-if(rmse_aic < rmse_aic) {
-  start_model = model_aic
-} else {
-  start_model = model_bic
-}
-coef(start_model)
+#model_aic = step(model_2, direction="backward", trace=0)
+#model_bic = step(model_2, direction="backward", k = log(nrow(house_data)), trace=0)
+#(rmse_aic  = get_loocv_rmse(model_aic))
+#(rmse_bic  = get_loocv_rmse(model_bic))
 ```
-According to LOOCV RMSE, BIC search gives us the best model to start. This model is very good for interpretation as it balances between number of predictors and RMSE. Since our goal it to make best predition, we should explore furthur to find the model with best RMSE.
+According to LOOCV RMSE, BIC search gives us the best model to start. This model is very good for interpretation as it balances between number of predictors and RMSE. Since our goal it to make best predition, we should explore furthur to find the model with best RMSE. We assign this model to variable `start_model`.
 
+```{r, include=FALSE}
+#if(rmse_aic < rmse_aic) {
+#  start_model = model_aic
+#} else {
+#  start_model = model_bic
+#}
+```
 ```{r}
-start_predictors = attr(summary(start_model)$term,"term.labels")
-remaining_predictors = colnames(house_data)[!colnames(house_data) %in% c(names(sig_cor), "SalePrice")]
+#start_model = lm(formula = log(SalePrice) ~ OverallQual + log(GrLivArea) + GarageCars + BsmtQual + log(FirstFlrSF) + KitchenQual + GarageFinish + YearBuilt + YearRemodAdd, data = house_data)
+#coef(start_model)
+```
+
+## Optimize for LOOCV RMSE 
+```{r}
+#start_predictors = attr(summary(start_model)$term,"term.labels")
+#remaining_predictors = colnames(house_data)[!colnames(house_data) %in% c(names(sig_cor), "SalePrice")]
 
 #model = step(start_model, scope = build_formula("log(SalePrice)", all_predictors), direction = "forward", trace=0)
 ```
@@ -273,3 +388,4 @@ General confusion appears when you mix in ordinal data, such as those 5-point "h
     - Applied Statistics with R by David Dalpiaz
     - An Introduction to Statistical Learning with Applications in R by Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani
 - [`Examining your data`](http://www.personal.psu.edu/jxb14/M554/articles/Hair%20et%20al%202010%20--%20Chapter%202.pdf)
+- Data Description
