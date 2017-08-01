@@ -1,5 +1,5 @@
 ---
-title: "Proposal: Residential Housing Price Prediction"
+title: "Residential Housing Price Prediction"
 author: "STAT 420, Summer 2017, Martynas Sapoka (netid:?), Shailender Singh (netid: ?), Tesa Ho (netid: tnho2), Xiaoming Ji (netid: xj9)"
 netid: ""
 date: ''
@@ -177,9 +177,10 @@ hist(house_data$Log_LotArea, col = "dodgerblue",border = "darkorange")
 boxplot(Log_SalePrice ~ OverallQual, data = house_data, pch = 20, cex = 2, col = "darkorange", border = "dodgerblue")
 boxplot(Log_SalePrice ~ Neighborhood, data = house_data, pch = 20, cex = 2, col = "darkorange", border = "dodgerblue")
 ```
-Except the Neighborhood plot doesn't have much change, other plots look much better.
 
-###Combine predictors
+Except plot:`Log_SalePrice ~ Neighborhood` doesn't have much change, other plots look much better.
+
+###Combine Predictors
 ```{r}
 #Combine FullBath and HalfBath
 house_data$Bath = house_data$FullBath + house_data$HalfBath * 0.5
@@ -188,7 +189,6 @@ house_data = subset(house_data, select = -c(Id, FullBath, HalfBath))
 
 ```{r, message=FALSE, include=FALSE}
 #Utility functions
-
 library(lmtest)
 get_bp_decision = function(model, alpha) {
   decide = unname(bptest(model)$p.value < alpha)
@@ -251,9 +251,6 @@ get_predictor_name = function(all_names, dummy_names) {
 ```
 
 ##Predictor Selection
-To do: 
-- Plot the correlation
-
 We select the significant predictors that have high correlation with SalePrice.
 ```{r}
 #We convert all factor variables to numeric in order to call cor()
@@ -274,7 +271,7 @@ sig_model = lm(build_formula("Log_SalePrice", names(sig_cor)), data = house_data
 summary(sig_model)$adj.r.squared
 sort(vif(sig_model)[vif(sig_model) > 5], decreasing = TRUE)
 ```
-This model has good adjusted r-squared value. However, we do see many predictors has high VIFs. Although, high VIFs won't cause big problem to prediction, too many correlated predictors dose impact our capability to search through other better models using interaction or polynomial. This could also cause problem to analyze high leverage and calculate LOOCV RMSE because not able to solve $\left(X^\top X\right)^{-1}$.
+This model has good Adjusted R-squared value. However, we do see many predictors has high VIFs. Although, high VIFs won't cause big problem to prediction, too many correlated predictors dose impact our capability to search through other better models using interaction or polynomial. Strong colliearity could also cause problem to analyze high leverage and calculate LOOCV RMSE because not able to solve $\left(X^\top X\right)^{-1}$.
 
 We see `OverallQual` gives us the most trouble although VIF of `OverallQual2` is `r vif(sig_model)["OverallQual2"][[1]]`. Let's first try to remove this predictor and see what will happen.
 ```{r}
@@ -294,19 +291,18 @@ model_1 = lm(build_formula("Log_SalePrice", names(sig_cor)), data = house_data)
 summary(model_1)$adj.r.squared
 ```
 
-To handle the remaining predictors, we make a function so that we can remove the predictor one-by-one. The reason we do this one-by-one instead of all of high VIF predictors together is because removing of one high VIF predictor could lower the VIF of other predictors. We try to keep as many predictors as we can in order to improve prediction.
+To handle the remaining predictors, we make a function so that we can remove the predictor one-by-one. The reason we do this one-by-one instead of removing all high VIF predictors is because removing of one high VIF predictor could lower the VIF of other predictors. We try to keep as many predictors as we can in order to improve prediction.
 
 ```{r, warning=FALSE}
-rm_highvif_predictor = function(y_name, x_names, data, nstep = 0) {
+optimize_vif = function(y_name, x_names, data, must_have = c(), nstep = 0) {
   repeat {
     m = lm(build_formula(y_name, x_names), data = data)
-    high_vifs = vif(model_1)[vif(model_1) > 5]
+    high_vifs = vif(m)[vif(m) > 5 & !names(vif(m)) %in% must_have]
     if(length(high_vifs) == 0) break
 
-    print(sort(high_vifs, decreasing = TRUE)[1])
+    #print(sort(high_vifs, decreasing = TRUE)[1])
     rm_name = get_predictor_name(colnames(data), 
                                  names(sort(high_vifs, decreasing = TRUE))[1])
-    print(rm_name)
     x_names = x_names[x_names != rm_name]
     
     nstep = nstep - 1
@@ -314,116 +310,111 @@ rm_highvif_predictor = function(y_name, x_names, data, nstep = 0) {
   }
   x_names
 }
-
-rm_highvif_predictor("Log_SalePrice", predictors, data = house_data, nstep = 2 )
-
 ```
 
-
-Let's do the similar check on `GarageYrBlt` 
+Let's try this function by removing 2 highest VIF predictors and display them.
 ```{r, warning=FALSE}
-
-
-predictors = predictors[predictors != "GarageYrBlt"]
-model_2 = lm(build_formula("Log_SalePrice", predictors), data = house_data)
-vif(model_2)[vif(model_2) > 5]
-```
-We can see removing of `GarageYrBlt`, the adjusted r-squared wasn't changed much. 
-
-```{r}
-predictors = predictors[predictors != "GarageType"]
-model_3 = lm(build_formula("Log_SalePrice", predictors), data = house_data)
-vif(model_3)[vif(model_3) > 5]
+saved_predictors = predictors
+predictors = optimize_vif("Log_SalePrice", predictors, data = house_data, must_have = c("OverallQual", "Log_GrLivArea"), nstep = 2)
+saved_predictors[!saved_predictors %in% predictors]
 ```
 
-For the remaning variables, instead of checking them one by one, we do a exhausted search.
+For the remaning variables, instead of checking them one by one, we do an exhausted search.
 ```{r}
 library(leaps)
 all_mod = summary(regsubsets(build_formula("Log_SalePrice", predictors), data = house_data, nvmax = 20))
 all_mod$adjr2
 ```
+
+We choose 13th model to balance between predictor numbers and Adjusted R-squared. We then remove all high VIF predictors.
 ```{r}
-
-
-(predictors = names(all_mod$which[13,])[all_mod$which[13,]][-1])
+predictors = names(all_mod$which[13,])[all_mod$which[13,]][-1]
 predictors  = get_predictor_name(colnames(house_data), predictors)
-  
-model_4 = lm(build_formula("Log_SalePrice", predictors), data = house_data)
-vif(model_4)[vif(model_4) > 5]
+(predictors = optimize_vif("Log_SalePrice", predictors, data = house_data, 
+                           must_have = c("OverallQual", "Log_GrLivArea"), nstep = 2))
 ```
 
-We remove all predictors that have VIF > 5.
+This give us a model that has no collinearity problem, easy to interpret and has reasonable prediction coverage.
 ```{r}
-predictors = predictors[!predictors %in% c("ExterQual", "BsmtQual")]
-model_5 = lm(build_formula("Log_SalePrice", predictors), data = house_data)
-vif(model_5)[vif(model_5) > 5]
-```
-This give us a model that has no collinearity problem and also very easy to interpret.
-```{r}
-good_vif_model = model_5
-coef(good_vif_model)
+good_vif_model = lm(build_formula("Log_SalePrice", predictors), data = house_data)
+vif(good_vif_model)
 summary(good_vif_model)$r.squared
 ```
+
+Notice that we can also remove all high VIF variable at the very begining. This will give us a model as:
+```{r, warning=FALSE}
+new_predictors = optimize_vif("Log_SalePrice", saved_predictors, 
+                              data = house_data, must_have = c("OverallQual", "Log_GrLivArea"))
+good_vif_model_2 = lm(build_formula("Log_SalePrice", new_predictors), data = house_data)
+vif(good_vif_model_2)
+summary(good_vif_model_2)$r.squared
+```
+Since this model has much more predictors and has no much gain on Adjusted R-squared, we will stick to model **`good_vif_model`**.
+
+## Optimize for LOOCV RMSE 
+Until now, we focus on finding model which is small and collinearity issue free. Since our goal is prediction, we now swith to find a model that has lowest LOOC RMSE. The `good_vif_model` model is a good start.
+
+Let's first check its LOOCV RMSE.
+```{r}
+get_loocv_rmse(good_vif_model)
 ```
 
-As side note, we could also remove the high VIF variable one by one. This will give us a model as,
+Notice the model has no categorical predictor, we can try to add some categorical predictor we think is important. For example: Neighborhood.
+```{r}
+model_try = lm(build_formula("Log_SalePrice", c(predictors, "Neighborhood")), data = house_data)
+get_loocv_rmse(model_try)
+```
+The LOOCV RMSE dose improved. This gives us some confidence to find a model that has better LOOCV RMSE.
+
+Instead of trying to add/remove predictors manually, inspired by R `step()` function, we build a similar function to explore and find lowest LOOCV RMSE.
 
 ```{r}
-start_model = model_1
-
-do {
-  top_vif = sort(vif(model_1)[vif(model_1) > 5], decreasing = TRUE)[1]
-  rm_predictor = get_predictor_name(colnames(house_data), c(names(top_vif)))
+step_loocv_rmse =  function(start_model, extra_predictors, data, trace = 1) {
+  min_rmse     = get_loocv_rmse(start_model)
+  res_var_name = names(attr(summary(start_model)$term,"dataClasses")[1])
+  
+  n            = length(attr(summary(start_model)$term,"dataClasses"))
+  pre_names    = names(attr(summary(start_model)$term,"dataClasses")[2:n])
+  
+  repeat {
+    a_rmse = rep(0, length(extra_predictors))
+    for(i in 1: length(extra_predictors)) {
+      model = lm(build_formula(res_var_name, c(extra_predictors[i], pre_names)), data = data)
+      a_rmse[i] = get_loocv_rmse(model)
+    }
+    
+    rmse_i = which.min(a_rmse)
+    if(min_rmse <= a_rmse[rmse_i]) {
+      break
+    }
+    if(trace == 1) print(paste("+", extra_predictors[rmse_i], " MOOCV RMSE:", a_rmse[rmse_i], sep = ""))
+    
+    pre_names        = c(pre_names, extra_predictors[rmse_i])
+    extra_predictors = extra_predictors[!extra_predictors == extra_predictors[rmse_i]]
+    
+    min_rmse         = a_rmse[rmse_i]
+  }
+  #print(pre_names)
+  lm(build_formula(res_var_name, pre_names), data = data)
 }
 ```
 
-
-
-The VIFs of `GarageCars`, `TotalBsmtSF`, `KitchenQual`, `BsmtQual` and `GrLivArea` aren't that big. We perform search to find the best model.
 ```{r}
-#model_aic = step(model_2, direction="backward", trace=0)
-#model_bic = step(model_2, direction="backward", k = log(nrow(house_data)), trace=0)
-#(rmse_aic  = get_loocv_rmse(model_aic))
-#(rmse_bic  = get_loocv_rmse(model_bic))
-```
-According to LOOCV RMSE, BIC search gives us the best model to start. This model is very good for interpretation as it balances between number of predictors and RMSE. Since our goal it to make best predition, we should explore furthur to find the model with best RMSE. We assign this model to variable `start_model`.
-
-```{r, include=FALSE}
-#if(rmse_aic < rmse_aic) {
-#  start_model = model_aic
-#} else {
-#  start_model = model_bic
-#}
+extra_predictors = colnames(house_data)[!colnames(house_data) %in% c(names(sig_cor), "Log_SalePrice", predictors)]
+final_model = step_loocv_rmse(good_vif_model, extra_predictors, data = house_data)
 ```
 ```{r}
-#start_model = lm(formula = log(SalePrice) ~ OverallQual + log(GrLivArea) + GarageCars + BsmtQual + log(FirstFlrSF) + KitchenQual + GarageFinish + YearBuilt + YearRemodAdd, data = house_data)
-#coef(start_model)
+get_loocv_rmse(final_model)
 ```
 
-## Optimize for LOOCV RMSE 
-We should give categorical predictors a second chance.
-
-```{r}
-#start_predictors = attr(summary(start_model)$term,"term.labels")
-#remaining_predictors = colnames(house_data)[!colnames(house_data) %in% c(names(sig_cor), "SalePrice")]
-
-#model = step(start_model, scope = build_formula("log(SalePrice)", all_predictors), direction = "forward", trace=0)
-```
 
 #Results 
 
+-Kaggle score
 
 #Discussion
-- Whether we should make discrete variables in regression model a categorical predictors?
-
-The way to discern an interval/ratio variable is to ask if every unit increment in the variable indicates the same amount of increment in the context you wish you measure. For instance, the jump from 35 to 36 degrees is the same as the jump from 43 to 44; it's the same amount of temperature difference. Likewise, the jump from 100 to 101 subscribers is the same as the jump from 1009 to 1010 subscribers. As long as this is true, your regression coefficient of that independent variable will make sense, because you can legitimately interpret it as the slope of the regression line.
-
-General confusion appears when you mix in ordinal data, such as those 5-point "how satisfied are you?" questions. They are expressed in whole number, very easily to be confused with discrete data. However, each jump in the scale does not necessarily mean the same thing. E.g. a jump from "4: happy" to "5: very happy" is not necessarily the same as a jump from "1: very unhappy" to "2: unhappy." In that case, the variable should not be put into the regression as is, but treated differently (search "dummy variable in regression" to learn more.)
-
-- Model Assumption 
-
-- Kaggle Score
-
+- Improvement
+- Model Assumption
 
 #Appendix
 - [`Kaggle Competition`](https://www.kaggle.com/c/house-prices-advanced-regression-techniques)
@@ -432,3 +423,4 @@ General confusion appears when you mix in ordinal data, such as those 5-point "h
     - An Introduction to Statistical Learning with Applications in R by Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani
 - [`Examining your data`](http://www.personal.psu.edu/jxb14/M554/articles/Hair%20et%20al%202010%20--%20Chapter%202.pdf)
 - Data Description
+- Utility Functions
