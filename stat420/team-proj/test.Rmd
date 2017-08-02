@@ -1,0 +1,17 @@
+```{r, eval=FALSE, warning=TRUE, include=FALSE}
+library(leaps)
+all_mod = summary(regsubsets(build_formula("Log_SalePrice", predictors), data = house_data, nvmax = 20))
+all_mod$adjr2
+
+vars  = names(all_mod$which[12,])[all_mod$which[12,]][-1]
+vars  = get_predictor_name(colnames(house_data), vars)
+vars  = optimize_vif("Log_SalePrice", vars, data = house_data, 
+                     must_have = c("OverallQual", "Log_GrLivArea"))
+good_vif_model_2 = lm(build_formula("Log_SalePrice", vars), data = house_data)
+vif(good_vif_model_2)
+summary(good_vif_model_2)$r.squared
+```
+
+|h         |i        |  j         |
+|----------|---------|------------|
+|-abc     -|-ef      |gh         -|
