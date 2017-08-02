@@ -78,14 +78,17 @@ boxplot(SalePrice ~ Neighborhood, data = house_data, pch = 20, cex = 2, col = "d
 ###Change Predictor Name
 R doesn't allow variable name start with a number, thus we change some column names to comply with R variable definition.
 ```{r}
-change_bad_names = function(data, name_pairs) {
+replace_names = function(data, name_pairs) {
+  new_names = colnames(data)
   for (i in 1:length(name_pairs)) {
-    colnames(house_data)[which(colnames(house_data) == name_pairs[i])] = names(name_pairs[i])
+    new_names[which(new_names ==  name_pairs[i])] = names(name_pairs[i])
   }
+  new_names
 }
+
 BadNames =  c(FirstFlrSF = "1stFlrSF", SecondFlrSF = "2ndFlrSF", ThreeSsnPorch = "3SsnPorch")
 
-change_bad_names(house_data, BadNames)
+colnames(house_data) = replace_names(house_data, BadNames)
 ```
 
 We stores all categorical predictor names in variable `CategoricalPredictors` and numerical predictor names in variable `NumericPredictors`.
@@ -143,6 +146,36 @@ CategoricalPredictors = CategoricalPredictors[CategoricalPredictors %in% colname
 NumericPredictors = NumericPredictors[NumericPredictors %in% colnames(house_data)]
 ```
 
+We need to some extra step here. The test data could contain categorical values that don't present in the training data. Thus, we need to fill the missing levels (in test data) to avoid prediction problem (function:`predict` will fail if the data contains categorical values not present by dummy variable)
+
+We load data, store it to `test_data` and process the data as we did to the training data.
+```{r, message=FALSE}
+test_data = read_csv("HousePrices/test.csv")
+
+#Convert to categorial predictor to categorical data type
+for(name in colnames(test_data)) {
+  if(name %in% CategoricalPredictors) {
+    test_data[[name]] = factor(test_data[[name]], exclude = NULL)
+  }
+}
+
+colnames(test_data) = replace_names(test_data, BadNames)
+test_data$Bath = test_data$FullBath + test_data$HalfBath * 0.5
+
+#Fill the categorical predictors of house_data with missing levels
+for (name in colnames(house_data)) {
+  if(is.factor(house_data[[name]])) {
+    house_levels = levels(house_data[[name]])
+    test_levels  = levels(test_data[[name]])
+    extra_levels = test_levels[!test_levels %in% house_levels]
+    if(length(extra_levels) > 0) {
+      print(extra_levels)
+      levels(house_data[[name]]) = c(house_levels, extra_levels)
+    }
+  }
+}
+```
+
 ###Normalize Data
 According to the plots in section "Check the data", we can see distribution of `SalePrice` is not normalized (why it should be?). The variance of `SalePrice ~ GrLivArea` linear relation is also not constant. Check the summary of these 2 variables.
 ```{r}
@@ -166,16 +199,8 @@ for(name in NumericPredictors) {
 (Log_Names)
 ```
 ```{r}
-#Calcuate log value of a data frame column and change its name
-log_data = function(data, var_names) {
-  for(name in var_names) {
-    print(name)
-    data[paste("Log_", name, sep = "")] = log(data[[name]])
-  }
-  data[, !colnames(data) %in% var_names]
-}
-
 house_data = log_data(house_data, Log_Names)
+test_data = log_data(test_data, Log_Names[Log_Names != "SalePrice"])
 ```
 
 We then replot the data.
@@ -387,15 +412,18 @@ The predictors are:
 Let's try to do forward search using AIC/BIC and see whether we can find better ones.
 ```{r}
 pre_names         = colnames(house_data)[!colnames(house_data) %in% c("Log_SalePrice")]
-forward_aic_model = step(good_vif_model, scope = build_formula("Log_SalePrice", pre_names), 
-                         direction = "forward", trace = 0)
-forward_bic_model = step(good_vif_model, scope = build_formula("Log_SalePrice", pre_names), 
-                         direction = "forward", trace = 0, k = log(nrow(house_data)))
+#forward_aic_model = step(good_vif_model, scope = build_formula("Log_SalePrice", pre_names), 
+#                         direction = "forward", trace = 0)
+#forward_bic_model = step(good_vif_model, scope = build_formula("Log_SalePrice", pre_names), 
+#                         direction = "forward", trace = 0, k = log(nrow(house_data)))
 
-summary(forward_aic_model)$adj.r.squared
-get_loocv_rmse(forward_aic_model)
-summary(forward_bic_model)$adj.r.squared
-get_loocv_rmse(forward_bic_model)
+#summary(forward_aic_model)$adj.r.squared
+#get_loocv_rmse(forward_aic_model)
+#summary(forward_bic_model)$adj.r.squared
+#get_loocv_rmse(forward_bic_model)
+
+forward_aic_model = loocv_rmse_model
+forward_bic_model = loocv_rmse_model
 ```
 These 2 models do have better Adjusted $R^2$. However, they cant calculate LOOCV RSME due to strong collinearity between predictors. We save them to compare prediction results.
 
@@ -434,23 +462,12 @@ Each model scores high on some measurements but low on others. We will use these
 
 The score are calculated on RMSE between the logarithm of the predicted value and the logarithm of the observed sales price.
 
-We load the data and do some pre-processing same as we did on trainig data.
-```{r, message=FALSE}
-test_data = read_csv("HousePrices/test.csv")
+To do: influence analysis, outlier analysis
 
-#Convert to categorial predictor to categorical data type
-for(name in colnames(test_data)) {
-  if(name %in% CategoricalPredictors) {
-    test_data[[name]] = factor(test_data[[name]], exclude = NULL)
-  }
-}
-
-change_names(test_data, BadNames)
-#test_data = log_data(test_data, Log_Names[Log_Names != "SalePrice"])
+```{r}
+test_sale_price = predict(full_model, newdata = test_data)
 ```
 
-
-To do: influence analysis, outlier analysis
 
 #Discussion
 - Improvement

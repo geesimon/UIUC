@@ -30,6 +30,16 @@ plot_qq = function(model, pointcol = "dodgerblue", linecol = "darkorange") {
   qqline(resid(model), col = linecol, lwd = 2)
 }
 
+
+#Calcuate log value of a data frame column and change its name
+log_data = function(data, var_names) {
+  for(name in var_names) {
+    print(name)
+    data[paste("Log_", name, sep = "")] = log(data[[name]])
+  }
+  data[, !colnames(data) %in% var_names]
+}
+
 #Build formular for lm from array of predictor names
 build_predictors_str = function(predictor_names) {
   str_var = ""

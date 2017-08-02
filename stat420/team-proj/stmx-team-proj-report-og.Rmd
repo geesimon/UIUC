@@ -128,7 +128,7 @@ house_cols = colnames(house_data)
 x = (length(house_cols)-1)/10
 
 for (i in 0:(x-1)){
-  pairs(num_house_data[, c(house_cols[(10*i+1):(10*(i+1))], "SalePrice")], col="dodgerblue")
+  #pairs(num_house_data[, c(house_cols[(10*i+1):(10*(i+1))], "SalePrice")], col="dodgerblue")
 }
 
 ``` 
