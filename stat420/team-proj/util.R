@@ -14,6 +14,11 @@ get_loocv_rmse = function(model) {
   sqrt(mean((resid(model) / (1 - hatvalues(model))) ^ 2))
 }
 
+## function to calculate rmse
+rmse  = function(actual, predicted) {
+  sqrt(mean((actual - predicted) ^ 2, na.rm=TRUE))
+}
+
 get_adj_r2 = function(model) {
   summary(model)$adj.r.squared
 }
@@ -70,7 +75,6 @@ build_formula = function(response_name, predictor_names, interactive_names = NUL
   as.formula(str_formula)
 }
 
-build_formula("Log", c("A","B"), c("D", "E"))
 #Get predictor original name from dummy variable names
 get_predictor_name = function(all_names, dummy_names) {
   names = c()
@@ -81,4 +85,24 @@ get_predictor_name = function(all_names, dummy_names) {
     }
   }
   names
+}
+
+## function to compare models using rmse 
+compareModels = function(models, modelNames){
+  train_error = rep(0, length(modelNames))
+  test_error = rep(0, length(modelNames))
+  for (i in 1:length(modelNames)){
+    ## train errors
+    train_error[i] = rmse(train_data$Log_SalePrice, predict(models[[ modelNames[i] ]], newdata=train_data))
+    ## test errors
+    test_error[i] = rmse(test_data$Log_SalePrice, predict(models[[ modelNames[i] ]], newdata=test_data))
+  }
+  df = data.frame("models"=modelNames, "trainErrors"=train_error, "testErrors"=test_error)
+  return(df)
+}
+
+plot_errors = function(testData, model, model_name){
+  ndf = data.frame("Log_SalePrice"=testData["Log_SalePrice"], "pred.Log_SalePrice" = predict(model, 
+                                                                                      newdata=testData))
+  plot(ndf$Log_SalePricee - ndf$pred.Log_SalePrice, col = "blue", ylab = "Pred Errors", main = model_name)
 }

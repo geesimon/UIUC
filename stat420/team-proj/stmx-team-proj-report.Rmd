@@ -148,33 +148,6 @@ NumericPredictors = NumericPredictors[NumericPredictors %in% colnames(house_data
 
 We need to some extra step here. The test data could contain categorical values that don't present in the training data. Thus, we need to fill the missing levels (in test data) to avoid prediction problem (function:`predict` will fail if the data contains categorical values not present by dummy variable)
 
-We load data, store it to `test_data` and process the data as we did to the training data.
-```{r, message=FALSE}
-test_data = read_csv("HousePrices/test.csv")
-
-#Convert to categorial predictor to categorical data type
-for(name in colnames(test_data)) {
-  if(name %in% CategoricalPredictors) {
-    test_data[[name]] = factor(test_data[[name]], exclude = NULL)
-  }
-}
-
-colnames(test_data) = replace_names(test_data, BadNames)
-test_data$Bath = test_data$FullBath + test_data$HalfBath * 0.5
-
-#Fill the categorical predictors of house_data with missing levels
-for (name in colnames(house_data)) {
-  if(is.factor(house_data[[name]])) {
-    house_levels = levels(house_data[[name]])
-    test_levels  = levels(test_data[[name]])
-    extra_levels = test_levels[!test_levels %in% house_levels]
-    if(length(extra_levels) > 0) {
-      print(extra_levels)
-      levels(house_data[[name]]) = c(house_levels, extra_levels)
-    }
-  }
-}
-```
 
 ###Normalize Data
 According to the plots in section "Check the data", we can see distribution of `SalePrice` is not normalized (why it should be?). The variance of `SalePrice ~ GrLivArea` linear relation is also not constant. Check the summary of these 2 variables.
@@ -200,7 +173,6 @@ for(name in NumericPredictors) {
 ```
 ```{r}
 house_data = log_data(house_data, Log_Names)
-test_data = log_data(test_data, Log_Names[Log_Names != "SalePrice"])
 ```
 
 We then replot the data.
@@ -227,9 +199,11 @@ house_data = subset(house_data, select = -c(Id, FullBath, HalfBath))
 ```
 
 ##Predictor Selection
-We select the significant predictors that have high correlation with SalePrice and store these predictor names to `Start_Pre_Names`.
 
-```{r}
+###Visualize the correlation
+
+$## Correlation pairs plot##$
+```{r, include=FALSE}
 #We convert all factor variables to numeric in order to call cor()
 num_house_data = house_data
 for(name in colnames(num_house_data)){
@@ -237,6 +211,84 @@ for(name in colnames(num_house_data)){
     num_house_data[[name]] = as.numeric(num_house_data[[name]])
 }
 
+# number of corr plots
+house_cols = colnames(num_house_data)
+x = (length(house_cols)-1)/10
+
+for (i in 0:(x-1)){
+  #Need uncomment
+  #pairs(num_house_data[, c(house_cols[(10*i+1):(10*(i+1))], "Log_SalePrice")], col="dodgerblue")
+}
+```
+
+$## Examine numerical variables ##$
+```{r, include=FALSE}
+non_factors = c("Log_LotFrontage", "Log_LotArea", "YearBuilt", 
+                "YearRemodAdd", "MasVnrArea", "BsmtFinSF1",
+                "BsmtFinSF2", "BsmtUnfSF", "TotalBsmtSF", 
+                "LowQualFinSF", "Log_FirstFlrSF",
+                "Log_GrLivArea", "BsmtFullBath", "BsmtHalfBath",
+                "BedroomAbvGr", "KitchenAbvGr", 
+                "TotRmsAbvGrd", "Fireplaces", "GarageYrBlt",
+                "GarageCars", "GarageArea", "WoodDeckSF", 
+                "OpenPorchSF", "EnclosedPorch",  
+                "ScreenPorch", "PoolArea", "MiscVal", "Log_SalePrice")
+
+nf_data = data.frame(sapply(house_data[, non_factors], function(x) as.numeric(x)))
+colnames(nf_data) = non_factors
+nf_corr = cor(nf_data)
+sort(nf_corr["Log_SalePrice",], decreasing=TRUE)
+```
+
+$## Histogram ##$
+
+Histograms of the numerical variables that are significant.
+
+```{r, echo=FALSE}
+top_corrs = sort(nf_corr["Log_SalePrice", ], decreasing=TRUE)[sort(nf_corr["Log_SalePrice", ], decreasing=TRUE) > 0]
+top_corrs_name = names(top_corrs[2:length(top_corrs)])
+
+par(mfrow=c(4,3))
+for (name in top_corrs_name[1:12]){
+  #Need uncomment
+  #hist(nf_data[,name], breaks=20, xlab=name, main="hist ", col="dodgerblue")
+}
+
+par(mfrow=c(4,3))
+for (name in top_corrs_name[13:length(top_corrs_name)]){
+  #Need uncomment
+  #hist(nf_data[,name], breaks=20, xlab=name, main="hist ", col="dodgerblue")
+}
+```
+
+$## SalePrice vs Top Correlated Features ##$
+```{r}
+par(mfrow=c(3,3))
+for (name in top_corrs_name[1:9]){
+  plot(nf_data[,name], house_data$Log_SalePrice, xlab=name, ylab="SalePrice", col="blue")
+  p_mod = lm(house_data$Log_SalePrice ~ nf_data[,name])
+  abline(coef(p_mod)[1], coef(p_mod)[2], col="orange", lwd=2)
+}
+
+par(mfrow=c(3,3))
+for (name in top_corrs_name[10:18]){
+  plot(nf_data[,name], house_data$Log_SalePrice, xlab=name, ylab="SalePrice", col="blue")
+  p_mod = lm(house_data$Log_SalePrice ~ nf_data[,name])
+  abline(coef(p_mod)[1], coef(p_mod)[2], col="orange", lwd=2)
+}
+
+par(mfrow=c(3,3))
+for (name in top_corrs_name[19:length(top_corrs_name)]){
+  plot(nf_data[,name], house_data$Log_SalePrice, xlab=name, ylab="SalePrice", col="blue")
+  p_mod = lm(house_data$Log_SalePrice ~ nf_data[,name])
+  abline(coef(p_mod)[1], coef(p_mod)[2], col="orange", lwd=2)
+}
+```
+
+####Significant Predictors
+As we have some basic understanding on our data correlation, we select the significant predictors that have high correlation with SalePrice and store these predictor names to `Start_Pre_Names`.
+
+```{r}
 all_cor = cor(num_house_data)
 (sig_cor = sort(abs(all_cor["Log_SalePrice", abs(all_cor["Log_SalePrice",]) > 0.5]), decreasing = TRUE)[-1])
 
@@ -371,11 +423,15 @@ step_loocv_rmse =  function(start_model, extra_predictors, data, trace = 1) {
   pre_names    = attr(summary(start_model)$term,"term.labels")
   
   while(length(extra_predictors) > 0) {
-    a_rmse = rep(0, length(extra_predictors))
+    a_rmse = rep(Inf, length(extra_predictors))
     for(i in 1: length(extra_predictors)) {
       model = lm(build_formula(res_var_name, c(pre_names, extra_predictors[i])), 
                  data = data)
-      a_rmse[i] = get_loocv_rmse(model)
+      
+      if (model$rank == ncol(model.matrix(model))){
+        #We only consider predictor that won't cause sigularity issue
+        a_rmse[i] = get_loocv_rmse(model)
+      }
     }
     
     rmse_i = which.min(a_rmse)
@@ -449,6 +505,44 @@ get_loocv_rmse(full_model)
 
 #Results 
 
+##Test Models 
+To verify each modelʻs predictive power, we split the data set into a training and test set and re-train the model on the training data.
+$## Split Model into Train & Test Sets ##$
+
+```{r}
+set.seed(42)
+train_index = sample(1:nrow(house_data), nrow(house_data)*2/3) # randomly chosen observations for training
+train_data  = house_data[train_index, ]
+test_data   = house_data[-train_index, ]
+# retrain
+model_1 = lm(build_formula("Log_SalePrice", names(sig_cor)), data = train_data)
+model_2 = model_1
+model_aic = step(model_2, direction="backward", trace = 0)
+model_bic = step(model_2, direction="backward", k = log(nrow(train_data)), trace=0)
+```
+
+```{r}
+## ADD MORE MODELS HERE TO COMPARE
+modelNames = c("model_1", "model_2", "model_aic", "model_bic")
+models = vector(mode="list", length = length(modelNames))
+models[["model_1"]] = model_1
+models[["model_2"]] = model_2
+models[["model_aic"]] = model_aic
+models[["model_bic"]] = model_bic
+
+compareModels(models, modelNames)
+```
+
+The prediction errors for each model were also very similar.
+```{r}
+## ADD MORE MODELS HERE TO COMPARE
+par(mfrow=c(2, 2))
+plot_errors(test_data, model_1, "model_1")
+plot_errors(test_data, model_2, "model_2")
+plot_errors(test_data, model_aic, "model_aic")
+plot_errors(test_data, model_bic, "model_bic")
+```
+
 We summarize 5 models: `full_model`, `loocv_rmse_model`, `loocv_rmse_model_int`, `forward_aic_model` and `forward_bic_model` as following.
 
 |              |Full      | Best LOOCV RSME | Interactive LOOCV RSME | Forward AIC | Forward BIC |
@@ -464,7 +558,26 @@ The score are calculated on RMSE between the logarithm of the predicted value an
 
 To do: influence analysis, outlier analysis
 
+
+We load data, store it to `test_data` and process the data as we did to the training data.
+```{r, message=FALSE}
+test_data = read_csv("HousePrices/test.csv")
+
+#Convert to categorial predictor to categorical data type
+for(name in colnames(test_data)) {
+  if(name %in% CategoricalPredictors) {
+    test_data[[name]] = factor(test_data[[name]], exclude = NULL)
+  }
+}
+
+colnames(test_data) = replace_names(test_data, BadNames)
+test_data$Bath = test_data$FullBath + test_data$HalfBath * 0.5
+```
+
+
 ```{r}
+test_data = log_data(test_data, Log_Names[Log_Names != "SalePrice"])
+
 test_sale_price = predict(full_model, newdata = test_data)
 ```
 

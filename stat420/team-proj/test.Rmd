@@ -15,3 +15,19 @@ summary(good_vif_model_2)$r.squared
 |h         |i        |  j         |
 |----------|---------|------------|
 |-abc     -|-ef      |gh         -|
+
+```{r}
+#Fill the categorical predictors of house_data with missing levels
+for (name in colnames(house_data)) {
+  if(is.factor(house_data[[name]])) {
+    house_levels = levels(house_data[[name]])
+    test_levels  = levels(test_data[[name]])
+    extra_levels = test_levels[!test_levels %in% house_levels]
+    if(length(extra_levels) > 0) {
+      print(extra_levels)
+      levels(house_data[[name]]) = c(house_levels, extra_levels)
+    }
+  }
+}
+```
+
