@@ -75,7 +75,7 @@ boxplot(SalePrice ~ Neighborhood, data = house_data, pch = 20, cex = 2, col = "d
 ```
 
 ## Data Preprocessing
-###Change Predictor Name
+####Change Predictor Name
 R doesn't allow variable name start with a number, thus we change some column names to comply with R variable definition.
 ```{r}
 replace_names = function(data, name_pairs) {
@@ -113,7 +113,7 @@ NumericPredictors = colnames(house_data)[!colnames(house_data) %in% c(Categorica
 (NumericPredictors)
 ```
 
-###Missing Data
+####Missing Data
 - Remove predictor with too many NAs (> 20%). In our data, NA is not a invalid value for most categorical predictors, but too many NA makes this predictor not very useful.
 - Replace numerical NA with mean
 - Convert categorical predictor to factor and make NA an extra value
@@ -149,7 +149,7 @@ NumericPredictors = NumericPredictors[NumericPredictors %in% colnames(house_data
 We need to some extra step here. The test data could contain categorical values that don't present in the training data. Thus, we need to fill the missing levels (in test data) to avoid prediction problem (function:`predict` will fail if the data contains categorical values not present by dummy variable)
 
 
-###Normalize Data
+####Normalize Data
 According to the plots in section "Check the data", we can see distribution of `SalePrice` is not normalized (why it should be?). The variance of `SalePrice ~ GrLivArea` linear relation is also not constant. Check the summary of these 2 variables.
 ```{r}
 summary(house_data$SalePrice)
@@ -189,7 +189,7 @@ boxplot(Log_SalePrice ~ Neighborhood, data = house_data, pch = 20, cex = 2, col 
 
 Except plot:`Log_SalePrice ~ Neighborhood` doesn't have much change, other plots look much better.
 
-###Combine Predictors
+####Combine Predictors
 The original data use `FullBath` and `HalfBath` to describe the bathroom information. `HalfBath` itself dosen't have strong relation with the price. Thus, we combine these two predictors to simplify the model and describe the SalePrice better.
 
 ```{r}
@@ -200,7 +200,7 @@ house_data = subset(house_data, select = -c(Id, FullBath, HalfBath))
 
 ##Predictor Selection
 
-###Visualize the correlation
+####Visualize Correlation
 
 $## Correlation pairs plot##$
 ```{r, include=FALSE}
@@ -221,8 +221,8 @@ for (i in 0:(x-1)){
 }
 ```
 
-$## Examine numerical variables ##$
-```{r, include=FALSE}
+$## Examine correlation between `Log_SalePrice` and numerical predictors ##$
+```{r, echo=FALSE}
 non_factors = c("Log_LotFrontage", "Log_LotArea", "YearBuilt", 
                 "YearRemodAdd", "MasVnrArea", "BsmtFinSF1",
                 "BsmtFinSF2", "BsmtUnfSF", "TotalBsmtSF", 
@@ -251,18 +251,18 @@ top_corrs_name = names(top_corrs[2:length(top_corrs)])
 par(mfrow=c(4,3))
 for (name in top_corrs_name[1:12]){
   #Need uncomment
-  #hist(nf_data[,name], breaks=20, xlab=name, main="hist ", col="dodgerblue")
+  hist(nf_data[,name], breaks=20, xlab=name, main="hist ", col="dodgerblue")
 }
 
 par(mfrow=c(4,3))
 for (name in top_corrs_name[13:length(top_corrs_name)]){
   #Need uncomment
-  #hist(nf_data[,name], breaks=20, xlab=name, main="hist ", col="dodgerblue")
+  hist(nf_data[,name], breaks=20, xlab=name, main="hist ", col="dodgerblue")
 }
 ```
 
 $## SalePrice vs Top Correlated Features ##$
-```{r}
+```{r, echo=FALSE}
 par(mfrow=c(3,3))
 for (name in top_corrs_name[1:9]){
   plot(nf_data[,name], house_data$Log_SalePrice, xlab=name, ylab="SalePrice", col="blue")
@@ -285,14 +285,13 @@ for (name in top_corrs_name[19:length(top_corrs_name)]){
 }
 ```
 
-####Significant Predictors
+####Store Significant Predictors
 As we have some basic understanding on our data correlation, we select the significant predictors that have high correlation with SalePrice and store these predictor names to `Start_Pre_Names`.
 
-```{r}
+```{r, echo=FALSE}
 all_cor = cor(num_house_data)
 (sig_cor = sort(abs(all_cor["Log_SalePrice", abs(all_cor["Log_SalePrice",]) > 0.5]), decreasing = TRUE)[-1])
 
-#Store these significant predictor names 
 Start_Pre_Names = names(sig_cor)
 ```
 
@@ -306,7 +305,7 @@ summary(sig_model)$adj.r.squared
 This model has good Adjusted $R^2$ value. 
 
 ####Solve Collinearity Problem
-```{r}
+```{r, message=TRUE, warning=FALSE}
 sort(vif(sig_model)[vif(sig_model) > 5], decreasing = TRUE)
 ```
 We see many predictors has high VIFs. Although high VIFs won't cause big problem to prediction, too many correlated predictors do impact our capability to search through other better models using interaction or polynomial. Strong colliearity could also cause problem to analyze high leverage and calculate LOOCV RMSE because not able to solve $\left(X^\top X\right)^{-1}$.
@@ -468,15 +467,15 @@ The predictors are:
 Let's try to do forward search using AIC/BIC and see whether we can find better ones.
 ```{r}
 pre_names         = colnames(house_data)[!colnames(house_data) %in% c("Log_SalePrice")]
-#forward_aic_model = step(good_vif_model, scope = build_formula("Log_SalePrice", pre_names), 
-#                         direction = "forward", trace = 0)
-#forward_bic_model = step(good_vif_model, scope = build_formula("Log_SalePrice", pre_names), 
-#                         direction = "forward", trace = 0, k = log(nrow(house_data)))
-
-#summary(forward_aic_model)$adj.r.squared
-#get_loocv_rmse(forward_aic_model)
-#summary(forward_bic_model)$adj.r.squared
-#get_loocv_rmse(forward_bic_model)
+# forward_aic_model = step(good_vif_model, scope = build_formula("Log_SalePrice", pre_names), 
+#                          direction = "forward", trace = 0)
+# forward_bic_model = step(good_vif_model, scope = build_formula("Log_SalePrice", pre_names), 
+#                          direction = "forward", trace = 0, k = log(nrow(house_data)))
+# 
+# summary(forward_aic_model)$adj.r.squared
+# get_loocv_rmse(forward_aic_model)
+# summary(forward_bic_model)$adj.r.squared
+# get_loocv_rmse(forward_bic_model)
 
 forward_aic_model = loocv_rmse_model
 forward_bic_model = loocv_rmse_model
@@ -489,10 +488,10 @@ names     = attr(summary(loocv_rmse_model)$term, "term.labels")
 cat_names = CategoricalPredictors[CategoricalPredictors %in% names]
 num_names = names[!names %in% cat_names]
 
-loocv_rmse_model_int = lm(build_formula("Log_SalePrice", num_names, cat_names), 
+crazy_int_model = lm(build_formula("Log_SalePrice", num_names, cat_names), 
                           data = house_data)
-summary(loocv_rmse_model_int)$adj.r.squared
-get_loocv_rmse(loocv_rmse_model_int)
+summary(crazy_int_model)$adj.r.squared
+get_loocv_rmse(crazy_int_model)
 ```
 This model gives us the best Adjusted $R^2$ but also no LOOCV RSME.
 
@@ -504,9 +503,9 @@ get_loocv_rmse(full_model)
 ```
 
 #Results 
-
 ##Test Models 
 To verify each modelʻs predictive power, we split the data set into a training and test set and re-train the model on the training data.
+
 $## Split Model into Train & Test Sets ##$
 
 ```{r}
@@ -514,42 +513,47 @@ set.seed(42)
 train_index = sample(1:nrow(house_data), nrow(house_data)*2/3) # randomly chosen observations for training
 train_data  = house_data[train_index, ]
 test_data   = house_data[-train_index, ]
-# retrain
-model_1 = lm(build_formula("Log_SalePrice", names(sig_cor)), data = train_data)
-model_2 = model_1
-model_aic = step(model_2, direction="backward", trace = 0)
-model_bic = step(model_2, direction="backward", k = log(nrow(train_data)), trace=0)
 ```
 
 ```{r}
 ## ADD MORE MODELS HERE TO COMPARE
-modelNames = c("model_1", "model_2", "model_aic", "model_bic")
-models = vector(mode="list", length = length(modelNames))
-models[["model_1"]] = model_1
-models[["model_2"]] = model_2
-models[["model_aic"]] = model_aic
-models[["model_bic"]] = model_bic
 
-compareModels(models, modelNames)
+#"Full", "ForwardAIC"
+
+modelNames = c("BestVIF", "BestLOOCV_RMSE", "CrazyInteraction", "Full", "ForwardAIC", "ForwardBIC")
+models = vector(mode="list", length = length(modelNames))
+
+# retrain
+# models[[1]] = lm(build_formula(summary(good_vif_model)$term[[2]],
+#                            attr(summary(good_vif_model)$term,"term.labels")), data = train_data)
+# models[[2]] = lm(build_formula(summary(loocv_rmse_model)$term[[2]],
+#                            attr(summary(loocv_rmse_model)$term,"term.labels")), data = train_data)
+# models[[3]] = lm(build_formula(summary(crazy_int_model)$term[[2]],
+#                            attr(summary(crazy_int_model)$term,"term.labels")), data = train_data)
+# models[[4]] = lm(build_formula(summary(full_model)$term[[2]],
+#                            attr(summary(full_model)$term,"term.labels")), data = train_data)
+# models[[5]] = lm(build_formula(summary(forward_aic_model)$term[[2]],
+#                            attr(summary(forward_aic_model)$term,"term.labels")), data = train_data)
+# models[[4]] = lm(build_formula(summary(forward_bic_model)$term[[2]],
+#                            attr(summary(forward_bic_model)$term,"term.labels")), data = train_data)
+
+#compareModels(models, modelNames)
 ```
 
 The prediction errors for each model were also very similar.
 ```{r}
 ## ADD MORE MODELS HERE TO COMPARE
 par(mfrow=c(2, 2))
-plot_errors(test_data, model_1, "model_1")
-plot_errors(test_data, model_2, "model_2")
-plot_errors(test_data, model_aic, "model_aic")
-plot_errors(test_data, model_bic, "model_bic")
+# for(i in 1:length(modelNames)) plot_errors(test_data, models[i], modelNames[i])
 ```
 
 We summarize 5 models: `full_model`, `loocv_rmse_model`, `loocv_rmse_model_int`, `forward_aic_model` and `forward_bic_model` as following.
 
 |              |Full      | Best LOOCV RSME | Interactive LOOCV RSME | Forward AIC | Forward BIC |
 |--------------|----------|-----------------|------------------------|-------------|-------------|
-|Adjusted $R^2$|`r summary(full_model)$adj.r.squared`|`r summary(loocv_rmse_model)$adj.r.squared`|`r summary(loocv_rmse_model_int)$adj.r.squared`|`r summary(forward_aic_model)$adj.r.squared`|`r summary(forward_bic_model)$adj.r.squared`|
-|AIC           |`r AIC(full_model)`|`r AIC(loocv_rmse_model)`|`r AIC(loocv_rmse_model_int)`|`r AIC(forward_aic_model)`|`r AIC(forward_bic_model)`|
-|BIC           |`r BIC(full_model)`|`r BIC(loocv_rmse_model)`|`r BIC(loocv_rmse_model_int)`|`r BIC(forward_aic_model)`|`r BIC(forward_bic_model)`|
+|Adjusted $R^2$|`r summary(full_model)$adj.r.squared`|`r summary(loocv_rmse_model)$adj.r.squared`|`r summary(crazy_int_model)$adj.r.squared`|`r summary(forward_aic_model)$adj.r.squared`|`r summary(forward_bic_model)$adj.r.squared`|
+|AIC           |`r AIC(full_model)`|`r AIC(loocv_rmse_model)`|`r AIC(crazy_int_model)`|`r AIC(forward_aic_model)`|`r AIC(forward_bic_model)`|
+|BIC           |`r BIC(full_model)`|`r BIC(loocv_rmse_model)`|`r BIC(crazy_int_model)`|`r BIC(forward_aic_model)`|`r BIC(forward_bic_model)`|
 |LOOCV RSME    | N/A | `r get_loocv_rmse(loocv_rmse_model)` | N/A | N/A | N/A |
 
 Each model scores high on some measurements but low on others. We will use these models to make prediction on [test.csv](file:HousePrices/test.csv) and get [Kaggle score](https://www.kaggle.com/c/house-prices-advanced-regression-techniques#evaluation) to check their performance.
@@ -566,25 +570,32 @@ test_data = read_csv("HousePrices/test.csv")
 #Convert to categorial predictor to categorical data type
 for(name in colnames(test_data)) {
   if(name %in% CategoricalPredictors) {
-    test_data[[name]] = factor(test_data[[name]], exclude = NULL)
+    test_data[[name]] = factor(test_data[[name]])
   }
 }
 
 colnames(test_data) = replace_names(test_data, BadNames)
 test_data$Bath = test_data$FullBath + test_data$HalfBath * 0.5
+
+#Replace new categorical value with existing one in training dataset
+test_data$MSSubClass[test_data$MSSubClass==150] = 120
+
 ```
 
 
 ```{r}
 test_data = log_data(test_data, Log_Names[Log_Names != "SalePrice"])
 
-test_sale_price = predict(full_model, newdata = test_data)
+#test_sale_price = predict(full_model, newdata = test_data)
 ```
 
 
 #Discussion
-- Improvement
-- Model Assumption Check
+#### Improvement
+
+#### Model Assumption Check
+
+#### Outlier & Influence Analysis
 
 #Appendix
 - [Kaggle Competition - House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-techniques)
