@@ -60,7 +60,7 @@ source("util.R")
 We load the data and store it to variable `house_data`. Let's take a look on the data
 ```{r, include=FALSE}
 library(readr)
-house_data = read_csv("HousePrices/train.csv")
+house_data = read_csv("HousePrices/train_updated.csv")
 head(house_data)
 ```
 
@@ -119,13 +119,13 @@ NumericPredictors = colnames(house_data)[!colnames(house_data) %in% c(Categorica
 - Convert categorical predictor to factor and make NA an extra value
 
 ```{r}
-rm_names = c()
+RM_Names = c()
 for(name in colnames(house_data)) {
   nas = is.na(house_data[[name]])
   
   if(sum(nas) / nrow(house_data) > 0.2) {
     print(paste("(", name, ") Removed"))
-    rm_names = c(rm_names, name)
+    RM_Names = c(RM_Names, name)
     
   } else {
     if(name %in% CategoricalPredictors) { #Categorical predictor
@@ -138,7 +138,7 @@ for(name in colnames(house_data)) {
   }
 }
 
-house_data = house_data[, !colnames(house_data) %in% rm_names]
+house_data = house_data[, !colnames(house_data) %in% RM_Names]
 
 #Remove these predictors from categorical predictors
 CategoricalPredictors = CategoricalPredictors[CategoricalPredictors %in% colnames(house_data)]
@@ -250,13 +250,11 @@ top_corrs_name = names(top_corrs[2:length(top_corrs)])
 
 par(mfrow=c(4,3))
 for (name in top_corrs_name[1:12]){
-  #Need uncomment
   hist(nf_data[,name], breaks=20, xlab=name, main="hist ", col="dodgerblue")
 }
 
 par(mfrow=c(4,3))
 for (name in top_corrs_name[13:length(top_corrs_name)]){
-  #Need uncomment
   hist(nf_data[,name], breaks=20, xlab=name, main="hist ", col="dodgerblue")
 }
 ```
@@ -453,6 +451,7 @@ Then we can use this function to search model that has best LOOCV RMSE. We try a
 ```{r}
 extra_predictors = colnames(house_data)[!colnames(house_data) %in% 
                                           c(names(coef(good_vif_model)), "Log_SalePrice")]
+
 loocv_rmse_model = step_loocv_rmse(good_vif_model, extra_predictors, data = house_data)
 ```
 ```{r}
@@ -467,18 +466,18 @@ The predictors are:
 Let's try to do forward search using AIC/BIC and see whether we can find better ones.
 ```{r}
 pre_names         = colnames(house_data)[!colnames(house_data) %in% c("Log_SalePrice")]
-# forward_aic_model = step(good_vif_model, scope = build_formula("Log_SalePrice", pre_names), 
-#                          direction = "forward", trace = 0)
-# forward_bic_model = step(good_vif_model, scope = build_formula("Log_SalePrice", pre_names), 
-#                          direction = "forward", trace = 0, k = log(nrow(house_data)))
-# 
-# summary(forward_aic_model)$adj.r.squared
-# get_loocv_rmse(forward_aic_model)
-# summary(forward_bic_model)$adj.r.squared
-# get_loocv_rmse(forward_bic_model)
+forward_aic_model = step(good_vif_model, scope = build_formula("Log_SalePrice", pre_names),
+                         direction = "forward", trace = 0)
+forward_bic_model = step(good_vif_model, scope = build_formula("Log_SalePrice", pre_names),
+                         direction = "forward", trace = 0, k = log(nrow(house_data)))
 
-forward_aic_model = loocv_rmse_model
-forward_bic_model = loocv_rmse_model
+summary(forward_aic_model)$adj.r.squared
+get_loocv_rmse(forward_aic_model)
+summary(forward_bic_model)$adj.r.squared
+get_loocv_rmse(forward_bic_model)
+
+#forward_aic_model = loocv_rmse_model
+#forward_bic_model = loocv_rmse_model
 ```
 These 2 models do have better Adjusted $R^2$. However, they cant calculate LOOCV RSME due to strong collinearity between predictors. We save them to compare prediction results.
 
@@ -564,34 +563,48 @@ To do: influence analysis, outlier analysis
 
 
 We load data, store it to `test_data` and process the data as we did to the training data.
-```{r, message=FALSE}
+```{r, message=FALSE, include=FALSE}
 test_data = read_csv("HousePrices/test.csv")
+
+#Remove predictors removed in house_data
+test_data = test_data[, !colnames(test_data) %in% RM_Names]
 
 #Convert to categorial predictor to categorical data type
 for(name in colnames(test_data)) {
   if(name %in% CategoricalPredictors) {
-    test_data[[name]] = factor(test_data[[name]])
+    test_data[[name]] = factor(test_data[[name]], exclude = NULL)
+  } else {
+    nas = is.na(test_data[[name]])
+    test_data[[name]][nas] = mean(test_data[[name]][!nas])
   }
 }
 
 colnames(test_data) = replace_names(test_data, BadNames)
 test_data$Bath = test_data$FullBath + test_data$HalfBath * 0.5
-
-#Replace new categorical value with existing one in training dataset
-test_data$MSSubClass[test_data$MSSubClass==150] = 120
-
-```
-
-
-```{r}
 test_data = log_data(test_data, Log_Names[Log_Names != "SalePrice"])
-
-#test_sale_price = predict(full_model, newdata = test_data)
 ```
 
+
+```{r, eval=FALSE, include=FALSE}
+make_prediction = function(model, data) {
+  data.frame(id = data$Id, SalePrice = exp(predict(model, newdata = data)))
+}
+
+write.csv(make_prediction(good_vif_model, test_data), "HousePrices/Submission/good_vif.csv", row.names = FALSE)
+write.csv(make_prediction(loocv_rmse_model, test_data), "HousePrices/Submission/loocv_rmse.csv", row.names = FALSE)
+write.csv(make_prediction(crazy_int_model, test_data), "HousePrices/Submission/crazy_int.csv", row.names = FALSE)
+write.csv(make_prediction(full_model, test_data), "HousePrices/Submission/full.csv", row.names = FALSE)
+write.csv(make_prediction(forward_aic_model, test_data), "HousePrices/Submission/forward_aic.csv", row.names = FALSE)
+write.csv(make_prediction(forward_bic_model, test_data), "HousePrices/Submission/forward_bic.csv", row.names = FALSE)
+
+```
+![Kaggle Score Screen Shot](Kaggle.png)
 
 #Discussion
+
 #### Improvement
+
+#### N-Fold Cross-Validation
 
 #### Model Assumption Check
 

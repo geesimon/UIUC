@@ -61,13 +61,13 @@ I'd like give thanks to everyone's work. Here is the review.
 
 - Me/Xiaoming Ji (xj9)
     - Which parts of the project were worked on by that member
-        - Almost every part. Specifically, nominated the project topic, completed project proposal and submission, come out with systematic data pre-processing approach, a systematic way to select predictors, find a way to optimize model for loocv rmse, test against kaggle score, made discussions and appendix, and prepared the final report for team review, and report submission.
+        - Almost every part. Specifically, nominated the project topic, completed project proposal and submission, come out with systematic data pre-processing approach, a systematic way to select predictors, find a way to optimize model for vif and loocv rmse, test against kaggle score, made discussions and appendix, and prepared the final report for team review, and report submission.
     - How well that member communicated with the team (**Score: 80**)
         - Apparently I'm the most active member in this group and emailed/slacked most. However, I still give myself relatively low score on this because as I mentioned in Postmortem, I feel I need to improve the way to communicate with the team and be more effectively , set right expectation and make everyone better engaged. 
     - How well that member understood the course concepts (**Score: 100**)
         - I'm pretty confident on my understanding of this course. I also read other books  and articles related to linear model (see appendix in the group project report)
-    - Proportion of the project completed by that member (**Score: 67%**)
-        - Yes, its a little unbalanced work and commitment among us.
+    - Proportion of the project completed by that member (**Score: 77%**)
+        - Yes, its a little unbalanced work and commitment among us. Completed: Data Pre-Processing, Model Selection, Evaluate with Kaggle, Discussion and Appendix.
 - Martynas Sapoka (msapoka2)
     - Which parts of the project were worked on by that member
         - Discussed the project proposal, tried to find important features in the data set.
@@ -93,5 +93,5 @@ I'd like give thanks to everyone's work. Here is the review.
         - Tesa is the second most active member in the group. Very active on trying to setup team meeting, proposing project topic and did what he said. We have some debate on the goal of this project, I inclined to spend time and find the best model while Tesa's major purpose is to finish the work. But that's fine and I respect people's true intention of taking this class.   
     - How well that member understood the course concepts (**Score: 90**)
         - I believe Tesa has good understanding of this course. He is proficient on using R to visualize data and do model analysis. Although, I do feel he could spend more time to think the problem systematically and come out with a thoughtful  solution. Data science project is not always an easy task, it needs patience and endurance to make the best results.
-    - Proportion of the project completed by that member (**Score: 30%**)
-        -  Completed introduction, correlation scatterplots and histograms for data analysis, model prediction and evaluation.
+    - Proportion of the project completed by that member (**Score: 20%**)
+        -  Completed introduction, correlation scatterplots and histograms for data analysis. 

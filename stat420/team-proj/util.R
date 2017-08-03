@@ -39,7 +39,6 @@ plot_qq = function(model, pointcol = "dodgerblue", linecol = "darkorange") {
 #Calcuate log value of a data frame column and change its name
 log_data = function(data, var_names) {
   for(name in var_names) {
-    print(name)
     data[paste("Log_", name, sep = "")] = log(data[[name]])
   }
   data[, !colnames(data) %in% var_names]
