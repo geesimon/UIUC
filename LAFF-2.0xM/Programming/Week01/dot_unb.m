@@ -8,8 +8,8 @@ function [ alpha_out ] = dot_unb( alpha, x, y )
     yB ] = FLA_Part_2x1( y, ...
                          0, 'FLA_TOP' );
 
-  alpha_out = 0;
-  
+  alpha = 0;
+
   while ( size( xT, 1 ) < size( x, 1 ) )
 
     [ x0, ...
@@ -26,7 +26,7 @@ function [ alpha_out ] = dot_unb( alpha, x, y )
 
     %------------------------------------------------------------%
 
-    alpha_out = alpha_out + chi1 * psi1;
+    alpha = alpha + chi1 * psi1;
 
     %------------------------------------------------------------%
 
@@ -44,5 +44,6 @@ function [ alpha_out ] = dot_unb( alpha, x, y )
 
   end
 
+  alpha_out = alpha;
 
 return
