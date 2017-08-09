@@ -9,7 +9,7 @@ function [ alpha_out ] = dot_unb( alpha, x, y )
                          0, 'FLA_TOP' );
 
   alpha = 0;
-
+  
   while ( size( xT, 1 ) < size( x, 1 ) )
 
     [ x0, ...
@@ -43,7 +43,7 @@ function [ alpha_out ] = dot_unb( alpha, x, y )
                                        'FLA_TOP' );
 
   end
-
+  
   alpha_out = alpha;
 
 return
