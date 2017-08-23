@@ -1,4 +1,4 @@
-function [ y_out ] = Symv_u_unb_var1( A, x, y )
+function [ y_out ] = Symv_u_unb_var2( A, x, y )
 
   [ ATL, ATR, ...
     ABL, ABR ] = FLA_Part_2x2( A, ...
@@ -34,9 +34,9 @@ function [ y_out ] = Symv_u_unb_var1( A, x, y )
 
     %------------------------------------------------------------%
 
-    psi1 = laff_dots(transpose(a01), x0, psi1);
-    psi1 = laff_dots(alpha11, chi1, psi1);
-    psi1 = laff_dots(a12t, x2, psi1);
+    y0   = laff_axpy(chi1, a01, y0);
+    psi1 = laff_axpy(chi1, alpha11, psi1);
+    y2   = laff_axpy(chi1, transpose(a12t), y2);
 
     %------------------------------------------------------------%
 
