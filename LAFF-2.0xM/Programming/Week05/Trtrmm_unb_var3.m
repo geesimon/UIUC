@@ -1,4 +1,4 @@
-function [ C_out ] = Trtrmm_unb_var2( U, R, C )
+function [ C_out ] = Trtrmm_unb_var3( U, R, C )
 
   [ UTL, UTR, ...
     UBL, UBR ] = FLA_Part_2x2( U, ...
@@ -34,11 +34,11 @@ function [ C_out ] = Trtrmm_unb_var2( U, R, C )
 
     %------------------------------------------------------------%
     
+    c01 = laff_axpy(rho11, u01, c01);
+    C02 = laff_ger(1, u01, r12t, C02);
+   
     gamma11 = laff_dot(upsilon11, rho11);
-    
-    c12t = laff_trmv( 'Upper triangular', 'Transpose', 'Nonunit diag', R22, u12t);
-    c12t = laff_axpy(upsilon11, r12t, c12t);
-    
+    c12t = laff_scal(upsilon11, r12t);
     
     %------------------------------------------------------------%
 
