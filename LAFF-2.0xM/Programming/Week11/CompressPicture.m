@@ -9,7 +9,7 @@ imshow( B );
 
 % Choose the (approximate) number of columns you want to use for the 
 % aproximation.
-k = 30;
+k = 60;
 
 % Extract the number of rows and columns in B
 [ m, n ] = size( B )
@@ -27,17 +27,21 @@ A = B( :, 1:stride:n );
 % Replace the comments below with their respective operations from the notebook
     
 % C = A^T A
-
+C =  transpose(A) * A;
     
 % V = A^T B
-
+V = transpose(A) * B;
     
 % Overwrite C with its LU factorization
-
+% C = LU_unb_var5(C);
 
 % Extract the unit lower triangular matrix L and upper triangular matrix U.
-L = tril( C, -1 ) + eye( size( C ) );
-U = triu( C );
+%L = tril( C, -1 ) + eye( size( C ) );
+%U = triu( C );
+
+C = Cholesky_unb_var3(C);
+L = tril(C, 0);
+U = transpose(L);
     
 % Solve L(UX) = V, overwriting V with X
 V = L \ V;
